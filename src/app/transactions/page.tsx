@@ -58,6 +58,9 @@ export default function Transactions() {
       const totalSaved = filteredTransactions.reduce((acc, t) => acc + t.saved_amount, 0);
       const savingsRate = totalReported > 0 ? (totalSaved / totalReported) * 100 : 0;
 
+      // Map currency symbols that standard Helvetica cannot print (like ₹) to friendly strings
+      const pdfCurrency = currencySymbol === '₹' ? 'Rs. ' : currencySymbol === '€' ? 'EUR ' : currencySymbol === '£' ? 'GBP ' : currencySymbol;
+
       // Header Banner
       doc.setFillColor(18, 18, 18);
       doc.rect(0, 0, 210, 45, 'F');
@@ -78,7 +81,7 @@ export default function Transactions() {
       doc.setTextColor(200, 200, 200);
       doc.text(`Date: ${today}`, 196, 20, { align: 'right' });
       
-      const modeLabel = type === 'both' ? 'Comparison (Both)' : type === 'actual' ? 'Actual Spend Only' : 'Reported Budget Only';
+      const modeLabel = type === 'both' ? 'Comparison (Both)' : 'Ledger Report';
       doc.text(`Format: ${modeLabel}`, 196, 26, { align: 'right' });
       
       if (user?.email) {
@@ -99,7 +102,7 @@ export default function Transactions() {
       if (search) activeFilters.push(`Search: "${search}"`);
       if (categoryFilter !== 'All') activeFilters.push(`Category: ${categoryFilter}`);
       if (startDate || endDate) activeFilters.push(`Date Range: ${startDate || 'Any'} to ${endDate || 'Any'}`);
-      if (minSavings) activeFilters.push(`Min Savings: ${currencySymbol}${minSavings}`);
+      if (minSavings) activeFilters.push(`Min Savings: ${pdfCurrency}${minSavings}`);
       
       if (activeFilters.length === 0) {
         doc.text('None (Showing all entries)', 14, 62);
@@ -125,15 +128,15 @@ export default function Transactions() {
         // Card Values
         doc.setFontSize(12);
         doc.setTextColor(30, 30, 30);
-        doc.text(`${currencySymbol}${totalReported.toLocaleString()}`, 20, 92);
-        doc.text(`${currencySymbol}${totalActual.toLocaleString()}`, 65, 92);
+        doc.text(`${pdfCurrency}${totalReported.toLocaleString()}`, 20, 92);
+        doc.text(`${pdfCurrency}${totalActual.toLocaleString()}`, 65, 92);
         
         if (totalSaved >= 0) {
           doc.setTextColor(34, 139, 34); // Green
-          doc.text(`+${currencySymbol}${totalSaved.toLocaleString()}`, 110, 92);
+          doc.text(`+${pdfCurrency}${totalSaved.toLocaleString()}`, 110, 92);
         } else {
           doc.setTextColor(178, 34, 34); // Red
-          doc.text(`-${currencySymbol}${Math.abs(totalSaved).toLocaleString()}`, 110, 92);
+          doc.text(`-${pdfCurrency}${Math.abs(totalSaved).toLocaleString()}`, 110, 92);
         }
         
         doc.setTextColor(30, 30, 30);
@@ -142,23 +145,23 @@ export default function Transactions() {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8);
         doc.setTextColor(130, 130, 130);
-        doc.text('TOTAL ACTUAL SPEND', 20, 80);
+        doc.text('TOTAL AMOUNT', 20, 80);
         doc.text('TOTAL TRANSACTIONS', 110, 80);
 
         doc.setFontSize(14);
         doc.setTextColor(30, 30, 30);
-        doc.text(`${currencySymbol}${totalActual.toLocaleString()}`, 20, 92);
+        doc.text(`${pdfCurrency}${totalActual.toLocaleString()}`, 20, 92);
         doc.text(`${filteredTransactions.length} entries`, 110, 92);
       } else {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8);
         doc.setTextColor(130, 130, 130);
-        doc.text('TOTAL REPORTED BUDGET', 20, 80);
+        doc.text('TOTAL AMOUNT', 20, 80);
         doc.text('TOTAL TRANSACTIONS', 110, 80);
 
         doc.setFontSize(14);
         doc.setTextColor(30, 30, 30);
-        doc.text(`${currencySymbol}${totalReported.toLocaleString()}`, 20, 92);
+        doc.text(`${pdfCurrency}${totalReported.toLocaleString()}`, 20, 92);
         doc.text(`${filteredTransactions.length} entries`, 110, 92);
       }
 
@@ -171,25 +174,25 @@ export default function Transactions() {
         data = filteredTransactions.map(tx => [
           tx.date,
           tx.category,
-          `${currencySymbol}${tx.reported_amount.toLocaleString()}`,
-          `${currencySymbol}${tx.actual_spend.toLocaleString()}`,
-          `+${currencySymbol}${tx.saved_amount.toLocaleString()}`,
+          `${pdfCurrency}${tx.reported_amount.toLocaleString()}`,
+          `${pdfCurrency}${tx.actual_spend.toLocaleString()}`,
+          `+${pdfCurrency}${tx.saved_amount.toLocaleString()}`,
           tx.notes || '-'
         ]);
       } else if (type === 'actual') {
-        headers = [['Date', 'Category', 'Actual Spend', 'Notes']];
+        headers = [['Date', 'Category', 'Amount', 'Notes']];
         data = filteredTransactions.map(tx => [
           tx.date,
           tx.category,
-          `${currencySymbol}${tx.actual_spend.toLocaleString()}`,
+          `${pdfCurrency}${tx.actual_spend.toLocaleString()}`,
           tx.notes || '-'
         ]);
       } else {
-        headers = [['Date', 'Category', 'Reported Budget', 'Notes']];
+        headers = [['Date', 'Category', 'Amount', 'Notes']];
         data = filteredTransactions.map(tx => [
           tx.date,
           tx.category,
-          `${currencySymbol}${tx.reported_amount.toLocaleString()}`,
+          `${pdfCurrency}${tx.reported_amount.toLocaleString()}`,
           tx.notes || '-'
         ]);
       }
@@ -237,7 +240,8 @@ export default function Transactions() {
       }
 
       // Download
-      const filename = `ShadowSave_Receipt_${type}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      const filenamePrefix = type === 'both' ? 'ShadowSave_Comparison_Report' : 'ShadowSave_Ledger_Report';
+      const filename = `${filenamePrefix}_${new Date().toISOString().slice(0, 10)}.pdf`;
       doc.save(filename);
     } catch (err) {
       console.error('Error generating PDF:', err);
