@@ -44,6 +44,7 @@ interface AppContextType {
   hasPrivacyPin: boolean;
   setPrivacyPin: (pin: string) => void;
   togglePrivacyMode: (pin: string) => boolean;
+  dbError: string;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -87,7 +88,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const [dbError, setDbError] = useState<string>('');
+
   const fetchUserData = async (userId: string) => {
+    setDbError('');
     try {
       // Fetch user's transactions from Supabase
       const { data: txs, error: txError } = await supabase
@@ -107,14 +111,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (trError) throw trError;
 
-      setTransactions((txs as Transaction[]) || []);
-      setTransfers((trs as Transfer[]) || []);
+      let finalTxs = (txs as Transaction[]) || [];
+      let finalTrs = (trs as Transfer[]) || [];
+
+      // Auto-migration: If Supabase is empty but local storage contains entries, migrate them
+      if (finalTxs.length === 0 && finalTrs.length === 0) {
+        const localTxs = getTransactions();
+        const localTrs = getTransfers();
+
+        if (localTxs.length > 0) {
+          console.log('Migrating local transactions to Supabase for user', userId);
+          const txRows = localTxs.map(t => ({
+            id: t.id,
+            user_id: userId,
+            date: t.date,
+            reported_amount: t.reported_amount,
+            actual_spend: t.actual_spend,
+            saved_amount: t.saved_amount,
+            category: t.category,
+            notes: t.notes || '',
+            created_at: t.created_at
+          }));
+          const { error: upsertErr } = await supabase.from('transactions').upsert(txRows);
+          if (!upsertErr) {
+            finalTxs = localTxs;
+          } else {
+            console.error('Migration of transactions failed:', upsertErr);
+          }
+        }
+
+        if (localTrs.length > 0) {
+          console.log('Migrating local transfers to Supabase for user', userId);
+          const trRows = localTrs.map(t => ({
+            id: t.id,
+            user_id: userId,
+            date: t.date,
+            amount: t.amount,
+            destination: t.destination,
+            notes: t.notes || '',
+            created_at: t.created_at
+          }));
+          const { error: upsertErr } = await supabase.from('transfers').upsert(trRows);
+          if (!upsertErr) {
+            finalTrs = localTrs;
+          } else {
+            console.error('Migration of transfers failed:', upsertErr);
+          }
+        }
+      }
+
+      setTransactions(finalTxs);
+      setTransfers(finalTrs);
     } catch (err) {
       console.error('Failed to load user data from Supabase:', err);
+      setDbError(
+        err instanceof Error 
+          ? `Database Sync Error: ${err.message}. Ensure your database tables, columns (including 'user_id'), and RLS policies match the Supabase Database Schema Guide in Settings.`
+          : 'Database Sync Error: Failed to fetch data from Supabase. Please check your table configuration.'
+      );
     }
   };
 
   const refreshData = () => {
+    setDbError('');
     if (demoMode) {
       const txs = getTransactions();
       const trs = getTransfers();
@@ -361,6 +420,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         hasPrivacyPin: privacyPin !== '',
         setPrivacyPin: handleSetPrivacyPin,
         togglePrivacyMode: handleTogglePrivacyMode,
+        dbError,
       }}
     >
       {children}

@@ -138,6 +138,7 @@ export default function Settings() {
       if (transactions.length > 0) {
         const txRows = transactions.map(t => ({
           id: t.id,
+          user_id: user?.id || null,
           date: t.date,
           reported_amount: t.reported_amount,
           actual_spend: t.actual_spend,
@@ -159,6 +160,7 @@ export default function Settings() {
       if (transfers.length > 0 && !syncFailed) {
         const trRows = transfers.map(t => ({
           id: t.id,
+          user_id: user?.id || null,
           date: t.date,
           amount: t.amount,
           destination: t.destination,
@@ -408,8 +410,10 @@ export default function Settings() {
             To synchronize, create these two tables in your Supabase SQL editor:
           </p>
           <pre className="bg-black/40 border border-surface-border/40 p-2.5 rounded-lg text-[8.5px] text-muted-text font-mono overflow-x-auto select-all max-h-32">
-{`CREATE TABLE transactions (
+{`-- Create tables with user_id to match user sessions and enable RLS
+CREATE TABLE transactions (
   id TEXT PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   reported_amount NUMERIC NOT NULL,
   actual_spend NUMERIC NOT NULL,
@@ -421,12 +425,27 @@ export default function Settings() {
 
 CREATE TABLE transfers (
   id TEXT PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   amount NUMERIC NOT NULL,
   destination TEXT NOT NULL,
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
-);`}
+);
+
+-- Enable RLS and setup policies:
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transfers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own transactions" ON transactions
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage own transfers" ON transfers
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- IF ALTERING EXISTING TABLES:
+-- ALTER TABLE transactions ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+-- ALTER TABLE transfers ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;`}
           </pre>
         </div>
       </div>

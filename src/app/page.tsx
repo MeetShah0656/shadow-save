@@ -28,7 +28,8 @@ export default function Dashboard() {
     milestones, 
     currencySymbol, 
     deleteTransaction,
-    isPrivacyMode
+    isPrivacyMode,
+    dbError
   } = useApp();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -111,6 +112,24 @@ export default function Dashboard() {
           <span>Add Entry</span>
         </button>
       </div>
+
+      {dbError && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 bg-danger/10 border border-danger/20 rounded-2xl flex items-start gap-3 text-xs text-danger font-medium shadow-lg"
+        >
+          <div className="p-1 bg-danger/10 rounded-lg mt-0.5">
+            <svg className="w-4 h-4 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div className="space-y-1">
+            <span className="font-bold text-cream block text-[12px]">Supabase Synchronization Warning</span>
+            <p className="text-muted-text text-[11px] leading-relaxed">{dbError}</p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Summary Cards */}
       <div className={`grid grid-cols-1 ${isPrivacyMode ? 'sm:grid-cols-1 lg:grid-cols-1 max-w-sm' : 'sm:grid-cols-2 lg:grid-cols-4'} gap-4`}>
