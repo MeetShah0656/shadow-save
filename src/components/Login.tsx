@@ -16,7 +16,7 @@ export const Login: React.FC<LoginProps> = ({ onBypassDemo }) => {
   // Check if credentials are set
   const hasCredentials = 
     !!process.env.NEXT_PUBLIC_SUPABASE_URL && 
-    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    (!!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
 
   const handleGoogleLogin = async () => {
     if (!hasCredentials) {
