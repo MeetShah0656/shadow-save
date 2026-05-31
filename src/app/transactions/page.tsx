@@ -13,7 +13,9 @@ import {
   X,
   Calendar,
   Tag,
-  Plus
+  Plus,
+  Download,
+  ChevronDown
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -21,10 +23,11 @@ type SortField = 'date' | 'reported_amount' | 'actual_spend' | 'saved_amount';
 type SortOrder = 'asc' | 'desc';
 
 export default function Transactions() {
-  const { transactions, currencySymbol, deleteTransaction } = useApp();
+  const { transactions, currencySymbol, deleteTransaction, user } = useApp();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
+  const [isExportOpen, setIsExportOpen] = useState(false);
   
   // Search & Filter State
   const [search, setSearch] = useState('');
@@ -32,6 +35,191 @@ export default function Transactions() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [minSavings, setMinSavings] = useState('');
+
+  const generateReceiptPDF = async (type: 'reported' | 'actual' | 'both') => {
+    try {
+      // Dynamically import jsPDF and jspdf-autotable to prevent SSR compiler crashes
+      const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
+
+      const doc = new jsPDF();
+      
+      const today = new Date().toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      // Calculate totals of filtered transactions
+      const totalReported = filteredTransactions.reduce((acc, t) => acc + t.reported_amount, 0);
+      const totalActual = filteredTransactions.reduce((acc, t) => acc + t.actual_spend, 0);
+      const totalSaved = filteredTransactions.reduce((acc, t) => acc + t.saved_amount, 0);
+      const savingsRate = totalReported > 0 ? (totalSaved / totalReported) * 100 : 0;
+
+      // Header Banner
+      doc.setFillColor(18, 18, 18);
+      doc.rect(0, 0, 210, 45, 'F');
+
+      // Title Branding
+      doc.setTextColor(234, 230, 220); // Cream color (#EAE6DC)
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.text('S H A D O W S A V E', 14, 22);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(150, 150, 150);
+      doc.text('PREMIUM PERSONAL FINANCE & LEDGER', 14, 30);
+
+      // Date, Format & Account (Right Aligned)
+      doc.setFontSize(9);
+      doc.setTextColor(200, 200, 200);
+      doc.text(`Date: ${today}`, 196, 20, { align: 'right' });
+      
+      const modeLabel = type === 'both' ? 'Comparison (Both)' : type === 'actual' ? 'Actual Spend Only' : 'Reported Budget Only';
+      doc.text(`Format: ${modeLabel}`, 196, 26, { align: 'right' });
+      
+      if (user?.email) {
+        doc.text(`Account: ${user.email}`, 196, 32, { align: 'right' });
+      }
+
+      // Active Filters
+      doc.setTextColor(60, 60, 60);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('ACTIVE FILTERS', 14, 56);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      
+      const activeFilters: string[] = [];
+      if (search) activeFilters.push(`Search: "${search}"`);
+      if (categoryFilter !== 'All') activeFilters.push(`Category: ${categoryFilter}`);
+      if (startDate || endDate) activeFilters.push(`Date Range: ${startDate || 'Any'} to ${endDate || 'Any'}`);
+      if (minSavings) activeFilters.push(`Min Savings: ${currencySymbol}${minSavings}`);
+      
+      if (activeFilters.length === 0) {
+        doc.text('None (Showing all entries)', 14, 62);
+      } else {
+        doc.text(activeFilters.join('  |  '), 14, 62);
+      }
+
+      // Summary Card Grid
+      doc.setFillColor(248, 246, 242);
+      doc.setDrawColor(230, 225, 215);
+      doc.rect(14, 72, 182, 28, 'FD');
+
+      // Card Headers
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(130, 130, 130);
+      doc.text('REPORTED BUDGET', 20, 80);
+      doc.text('ACTUAL SPEND', 65, 80);
+      doc.text('NET SAVINGS', 110, 80);
+      doc.text('SAVINGS RATE', 155, 80);
+
+      // Card Values
+      doc.setFontSize(12);
+      doc.setTextColor(30, 30, 30);
+      doc.text(`${currencySymbol}${totalReported.toLocaleString()}`, 20, 92);
+      doc.text(`${currencySymbol}${totalActual.toLocaleString()}`, 65, 92);
+      
+      if (totalSaved >= 0) {
+        doc.setTextColor(34, 139, 34); // Green
+        doc.text(`+${currencySymbol}${totalSaved.toLocaleString()}`, 110, 92);
+      } else {
+        doc.setTextColor(178, 34, 34); // Red
+        doc.text(`-${currencySymbol}${Math.abs(totalSaved).toLocaleString()}`, 110, 92);
+      }
+      
+      doc.setTextColor(30, 30, 30);
+      doc.text(`${savingsRate.toFixed(1)}%`, 155, 92);
+
+      // Build Table Data
+      let headers: string[][] = [];
+      let data: string[][] = [];
+
+      if (type === 'both') {
+        headers = [['Date', 'Category', 'Reported Budget', 'Actual Spend', 'Saved Amount', 'Notes']];
+        data = filteredTransactions.map(tx => [
+          tx.date,
+          tx.category,
+          `${currencySymbol}${tx.reported_amount.toLocaleString()}`,
+          `${currencySymbol}${tx.actual_spend.toLocaleString()}`,
+          `+${currencySymbol}${tx.saved_amount.toLocaleString()}`,
+          tx.notes || '-'
+        ]);
+      } else if (type === 'actual') {
+        headers = [['Date', 'Category', 'Actual Spend', 'Notes']];
+        data = filteredTransactions.map(tx => [
+          tx.date,
+          tx.category,
+          `${currencySymbol}${tx.actual_spend.toLocaleString()}`,
+          tx.notes || '-'
+        ]);
+      } else {
+        headers = [['Date', 'Category', 'Reported Budget', 'Notes']];
+        data = filteredTransactions.map(tx => [
+          tx.date,
+          tx.category,
+          `${currencySymbol}${tx.reported_amount.toLocaleString()}`,
+          tx.notes || '-'
+        ]);
+      }
+
+      autoTable(doc, {
+        head: headers,
+        body: data,
+        startY: 110,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [18, 18, 18],
+          textColor: [234, 230, 220],
+          fontSize: 9,
+          fontStyle: 'bold',
+          halign: 'left'
+        },
+        bodyStyles: {
+          fontSize: 8.5,
+          textColor: [60, 60, 60]
+        },
+        alternateRowStyles: {
+          fillColor: [250, 249, 246]
+        },
+        margin: { left: 14, right: 14 }
+      });
+
+      // Add page footers
+      const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(160, 160, 160);
+        doc.text(
+          'Thank you for using ShadowSave to track your budgets consciously.',
+          105,
+          287,
+          { align: 'center' }
+        );
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          196,
+          287,
+          { align: 'right' }
+        );
+      }
+
+      // Download
+      const filename = `ShadowSave_Receipt_${type}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      doc.save(filename);
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
 
   // Sorting State
   const [sortField, setSortField] = useState<SortField>('date');
@@ -120,13 +308,64 @@ export default function Transactions() {
             Search, sort, and filter your logged savings transactions.
           </p>
         </div>
-        <button
-          onClick={handleAddClick}
-          className="flex items-center justify-center gap-2 bg-cream hover:bg-cream-dim text-background px-4 py-2.5 rounded-xl transition-all cursor-pointer font-bold shadow-lg shadow-cream/10 text-xs self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Entry</span>
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          {/* Export PDF Receipt Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setIsExportOpen(!isExportOpen)}
+              className="flex items-center justify-center gap-2 bg-surface-hover hover:bg-surface-border text-cream border border-surface-border px-4 py-2.5 rounded-xl transition-all cursor-pointer font-semibold text-xs h-[38px]"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export Receipt</span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            </button>
+            {isExportOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setIsExportOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-52 rounded-xl bg-surface border border-surface-border shadow-2xl p-1.5 z-50 flex flex-col space-y-1">
+                  <button
+                    onClick={() => {
+                      generateReceiptPDF('both');
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs text-cream hover:bg-surface-hover rounded-lg transition-colors cursor-pointer font-medium"
+                  >
+                    Comparison Receipt (Both)
+                  </button>
+                  <button
+                    onClick={() => {
+                      generateReceiptPDF('actual');
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs text-muted-text hover:bg-surface-hover hover:text-cream rounded-lg transition-colors cursor-pointer font-medium"
+                  >
+                    Actual Spend Only
+                  </button>
+                  <button
+                    onClick={() => {
+                      generateReceiptPDF('reported');
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs text-muted-text hover:bg-surface-hover hover:text-cream rounded-lg transition-colors cursor-pointer font-medium"
+                  >
+                    Reported Budget Only
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <button
+            onClick={handleAddClick}
+            className="flex items-center justify-center gap-2 bg-cream hover:bg-cream-dim text-background px-4 py-2.5 rounded-xl transition-all cursor-pointer font-bold shadow-lg shadow-cream/10 text-xs h-[38px]"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Entry</span>
+          </button>
+        </div>
       </div>
 
       {/* Search and Filters Drawer */}
