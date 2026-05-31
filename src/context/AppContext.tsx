@@ -181,56 +181,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     let isMounted = true;
 
-    // Safety timeout: if auth takes more than 8 seconds, stop loading
+    // Safety timeout — if no auth event fires in 10s, stop the spinner
     const timeoutId = setTimeout(() => {
-      if (isMounted) {
-        console.warn("Auth initialization timed out.");
-        setIsLoading(false);
-      }
-    }, 8000);
+      if (isMounted) setIsLoading(false);
+    }, 10000);
 
-    // Phase 1: getUser() validates the JWT with Supabase servers and refreshes
-    // it if expired — unlike getSession() which just reads stale storage.
-    // This guarantees the token is fresh so RLS SELECT policies work correctly.
-    supabase.auth.getUser().then(async ({ data: { user: freshUser } }) => {
-      if (!isMounted) return;
-      if (freshUser) {
-        setUser(freshUser);
-        // Show cached data instantly while fresh Supabase fetch runs
-        loadFromCache(freshUser.id);
-        await fetchUserData(freshUser.id);
-
-        // Retry once after 3s in case the JWT wasn't fully refreshed on the first attempt
-        setTimeout(async () => {
-          if (isMounted) await fetchUserData(freshUser.id);
-        }, 3000);
-      }
-      if (isMounted) {
-        setIsLoading(false);
-        clearTimeout(timeoutId);
-      }
-    });
-
-    // Phase 2: Listen for SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED.
-    // We skip INITIAL_SESSION because Phase 1 handles it more reliably.
+    // onAuthStateChange in Supabase v2 fires:
+    //   INITIAL_SESSION — immediately on subscription if a session exists (page reload)
+    //   SIGNED_IN       — after OAuth / email login completes
+    //   TOKEN_REFRESHED — after Supabase auto-refreshes an expired access token
+    //   SIGNED_OUT      — after sign-out
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
-      if (event === 'INITIAL_SESSION') return; // handled by getSession() above
 
       const currentUser = session?.user ?? null;
-      setUser(currentUser);
 
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      if (event === 'INITIAL_SESSION') {
+        // Page reload — session is restored from storage
+        setUser(currentUser);
+        if (currentUser) {
+          // Show cached data immediately so the UI is never blank
+          loadFromCache(currentUser.id);
+          // Fetch from Supabase — if JWT is still valid this returns data
+          // If expired, TOKEN_REFRESHED will fire shortly and re-fetch
+          fetchUserData(currentUser.id);
+        }
+        setIsLoading(false);
+        clearTimeout(timeoutId);
+
+      } else if (event === 'SIGNED_IN') {
+        // Fresh login — token is always valid here
+        setUser(currentUser);
         if (currentUser) {
           await fetchUserData(currentUser.id);
         }
+        setIsLoading(false);
+        clearTimeout(timeoutId);
+
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Access token was expired and has now been refreshed — re-fetch with valid token
+        setUser(currentUser);
+        if (currentUser) {
+          await fetchUserData(currentUser.id);
+        }
+
       } else if (event === 'SIGNED_OUT') {
+        setUser(null);
         setTransactions([]);
         setTransfers([]);
+        setIsLoading(false);
+        clearTimeout(timeoutId);
       }
-
-      setIsLoading(false);
-      clearTimeout(timeoutId);
     });
 
     return () => {
