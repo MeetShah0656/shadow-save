@@ -10,16 +10,21 @@ import {
   CheckCircle2, 
   AlertCircle,
   RefreshCw,
-  Database
+  Database,
+  User as UserIcon,
+  LogOut
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Settings() {
   const { 
+    user,
+    demoMode,
     settings, 
     updateSettings, 
     transactions, 
-    transfers
+    transfers,
+    signOut
   } = useApp();
 
   const [url, setUrl] = useState(settings.supabaseUrl || '');
@@ -217,6 +222,47 @@ export default function Settings() {
           <CheckCircle2 className="w-4 h-4 text-success" /> Settings saved successfully!
         </motion.div>
       )}
+
+      {/* Account Profile Card */}
+      <div className="glass-card p-6 rounded-2xl border border-surface-border space-y-4">
+        <h3 className="text-sm font-bold text-cream flex items-center gap-2">
+          <UserIcon className="w-4 h-4 text-cream" /> User Account
+        </h3>
+        
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-hover/30 border border-surface-border/50 p-4 rounded-xl">
+          <div className="flex items-center gap-3">
+            {user?.user_metadata?.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img 
+                src={user.user_metadata.avatar_url} 
+                alt="Avatar" 
+                className="w-10 h-10 rounded-full border border-cream/20"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-cream/10 border border-cream/20 rounded-full flex items-center justify-center text-cream">
+                <UserIcon className="w-5 h-5" />
+              </div>
+            )}
+            <div>
+              <p className="text-xs font-bold text-cream text-left">
+                {user?.user_metadata?.full_name || (demoMode ? 'Local Developer' : 'Authenticated User')}
+              </p>
+              <p className="text-[10px] text-muted-text text-left">
+                {user?.email || (demoMode ? 'demo_mode@local.storage' : 'No email associated')}
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={signOut}
+            className="flex items-center justify-center gap-1.5 bg-danger/10 hover:bg-danger/20 border border-danger/25 text-danger px-4 py-2.5 rounded-xl transition-all cursor-pointer text-xs font-bold self-start sm:self-auto"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
 
       {/* General Settings */}
       <div className="glass-card p-6 rounded-2xl border border-surface-border space-y-4">
