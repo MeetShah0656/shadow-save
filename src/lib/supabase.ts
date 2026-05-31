@@ -53,4 +53,13 @@ if (!hasUrl || !hasKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // Use browser localStorage for session persistence across reloads.
+    // The typeof check ensures this works safely in Next.js SSR/build environments.
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    persistSession: true,
+    detectSessionInUrl: true,
+    autoRefreshToken: true,
+  },
+});
