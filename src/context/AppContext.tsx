@@ -83,10 +83,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [dbError, setDbError] = useState<string>('');
 
+  const CACHE_KEY_TX = (uid: string) => `ss_cache_tx_${uid}`;
+  const CACHE_KEY_TR = (uid: string) => `ss_cache_tr_${uid}`;
+
+  const loadFromCache = (userId: string) => {
+    try {
+      const rawTx = localStorage.getItem(CACHE_KEY_TX(userId));
+      const rawTr = localStorage.getItem(CACHE_KEY_TR(userId));
+      if (rawTx) setTransactions(JSON.parse(rawTx) as Transaction[]);
+      if (rawTr) setTransfers(JSON.parse(rawTr) as Transfer[]);
+    } catch { /* ignore parse errors */ }
+  };
+
+  const saveToCache = (userId: string, txs: Transaction[], trs: Transfer[]) => {
+    try {
+      if (txs.length > 0) localStorage.setItem(CACHE_KEY_TX(userId), JSON.stringify(txs));
+      if (trs.length > 0) localStorage.setItem(CACHE_KEY_TR(userId), JSON.stringify(trs));
+    } catch { /* ignore storage errors */ }
+  };
+
+  const clearCache = (userId: string) => {
+    localStorage.removeItem(CACHE_KEY_TX(userId));
+    localStorage.removeItem(CACHE_KEY_TR(userId));
+  };
+
   const fetchUserData = async (userId: string) => {
     setDbError('');
     try {
-      // Fetch user's transactions from Supabase
       const { data: txs, error: txError } = await supabase
         .from('transactions')
         .select('*')
@@ -95,7 +118,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (txError) throw txError;
 
-      // Fetch user's transfers from Supabase
       const { data: trs, error: trError } = await supabase
         .from('transfers')
         .select('*')
@@ -107,63 +129,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let finalTxs = (txs as Transaction[]) || [];
       let finalTrs = (trs as Transfer[]) || [];
 
-      // Auto-migration: If Supabase is empty but local storage contains entries, migrate them
+      // Auto-migration: if Supabase is empty, try migrating from old localStorage demo data
       if (finalTxs.length === 0 && finalTrs.length === 0) {
         const localTxs = getTransactions();
         const localTrs = getTransfers();
 
         if (localTxs.length > 0) {
-          console.log('Migrating local transactions to Supabase for user', userId);
           const txRows = localTxs.map(t => ({
-            id: t.id,
-            user_id: userId,
-            date: t.date,
-            reported_amount: t.reported_amount,
-            actual_spend: t.actual_spend,
-            saved_amount: t.saved_amount,
-            category: t.category,
-            notes: t.notes || '',
-            created_at: t.created_at
+            id: t.id, user_id: userId, date: t.date,
+            reported_amount: t.reported_amount, actual_spend: t.actual_spend,
+            saved_amount: t.saved_amount, category: t.category,
+            notes: t.notes || '', created_at: t.created_at
           }));
           const { error: upsertErr } = await supabase.from('transactions').upsert(txRows);
-          if (!upsertErr) {
-            finalTxs = localTxs;
-          } else {
-            console.error('Migration of transactions failed:', upsertErr);
-            setDbError(`Transaction migration failed: ${upsertErr.message}. Make sure RLS is enabled and policies are set.`);
-          }
+          if (!upsertErr) finalTxs = localTxs;
         }
 
         if (localTrs.length > 0) {
-          console.log('Migrating local transfers to Supabase for user', userId);
           const trRows = localTrs.map(t => ({
-            id: t.id,
-            user_id: userId,
-            date: t.date,
-            amount: t.amount,
-            destination: t.destination,
-            notes: t.notes || '',
-            created_at: t.created_at
+            id: t.id, user_id: userId, date: t.date, amount: t.amount,
+            destination: t.destination, notes: t.notes || '', created_at: t.created_at
           }));
           const { error: upsertErr } = await supabase.from('transfers').upsert(trRows);
-          if (!upsertErr) {
-            finalTrs = localTrs;
-          } else {
-            console.error('Migration of transfers failed:', upsertErr);
-            setDbError(`Transfer migration failed: ${upsertErr.message}. Make sure RLS is enabled and policies are set.`);
-          }
+          if (!upsertErr) finalTrs = localTrs;
         }
       }
 
-      setTransactions(finalTxs);
-      setTransfers(finalTrs);
+      // Only update state + cache if Supabase returned actual data.
+      // If it returned 0 (e.g. token not ready yet), leave existing cached state untouched.
+      if (finalTxs.length > 0 || finalTrs.length > 0) {
+        setTransactions(finalTxs);
+        setTransfers(finalTrs);
+        saveToCache(userId, finalTxs, finalTrs);
+      }
+      // If genuinely 0 AND no cache exists, then show 0 (new account)
+      else {
+        const hasCachedTx = !!localStorage.getItem(CACHE_KEY_TX(userId));
+        const hasCachedTr = !!localStorage.getItem(CACHE_KEY_TR(userId));
+        if (!hasCachedTx && !hasCachedTr) {
+          setTransactions([]);
+          setTransfers([]);
+        }
+        // else: keep the cache-loaded state — Supabase returned empty due to token timing
+      }
     } catch (err) {
       console.error('Failed to load user data from Supabase:', err);
       setDbError(
-        err instanceof Error 
-          ? `Database Sync Error: ${err.message}. Ensure your database tables, columns (including 'user_id'), and RLS policies match the Supabase Database Schema Guide in Settings.`
-          : 'Database Sync Error: Failed to fetch data from Supabase. Please check your table configuration.'
+        err instanceof Error
+          ? `Database Sync Error: ${err.message}.`
+          : 'Database Sync Error: Failed to fetch data from Supabase.'
       );
+      // Do NOT reset state on error — keep cached data visible
     }
   };
 
@@ -187,14 +203,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }, 8000);
 
-    // Phase 1: getSession() reliably handles page-reload token refresh.
-    // It waits for the Supabase client to restore + refresh the stored token
-    // before resolving, so RLS-protected queries are guaranteed to work.
+    // Phase 1: Immediately show cached data so the UI is never blank on reload,
+    // then fetch from Supabase and update (or keep cache if query returns empty).
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!isMounted) return;
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
+        // Show cached data instantly — eliminates any zero-flash
+        loadFromCache(currentUser.id);
+        // Then fetch fresh data from Supabase
         await fetchUserData(currentUser.id);
       }
       if (isMounted) {
@@ -323,13 +341,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const handleSignOut = async () => {
-    setIsLoading(true);
-    // Optimistically clear local auth states to prevent hanging on network/Supabase errors
+    // Clear this user's display cache before signing out
+    if (user) clearCache(user.id);
+    setTransactions([]);
+    setTransfers([]);
     setUser(null);
     setIsLoading(false);
-    
     try {
-      // Fire and forget: trigger Supabase signOut in the background
       supabase.auth.signOut().catch(err => {
         console.error('Background logout error:', err);
       });
