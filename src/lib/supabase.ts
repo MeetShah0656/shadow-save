@@ -1,10 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project-url.supabase.co';
-const supabaseAnonKey = 
+const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project-url.supabase.co';
+const rawKey = 
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
   'placeholder-anon-key';
+
+// Clean values to prevent copy-paste spacing/quoting issues
+const supabaseUrl = rawUrl.trim().replace(/['"]/g, '');
+const supabaseAnonKey = rawKey.trim().replace(/['"]/g, '');
 
 const hasKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
