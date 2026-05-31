@@ -367,14 +367,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const handleSignOut = async () => {
     setIsLoading(true);
+    // Optimistically clear local auth states to prevent hanging on network/Supabase errors
+    setUser(null);
+    setDemoMode(false);
+    setIsLoading(false);
+    
     try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setDemoMode(false);
+      // Fire and forget: trigger Supabase signOut in the background
+      supabase.auth.signOut().catch(err => {
+        console.error('Background logout error:', err);
+      });
     } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      setIsLoading(false);
+      console.error('Logout call error:', err);
     }
   };
 
