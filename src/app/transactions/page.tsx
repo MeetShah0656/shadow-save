@@ -112,31 +112,55 @@ export default function Transactions() {
       doc.setDrawColor(230, 225, 215);
       doc.rect(14, 72, 182, 28, 'FD');
 
-      // Card Headers
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(130, 130, 130);
-      doc.text('REPORTED BUDGET', 20, 80);
-      doc.text('ACTUAL SPEND', 65, 80);
-      doc.text('NET SAVINGS', 110, 80);
-      doc.text('SAVINGS RATE', 155, 80);
+      if (type === 'both') {
+        // Card Headers
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(130, 130, 130);
+        doc.text('REPORTED BUDGET', 20, 80);
+        doc.text('ACTUAL SPEND', 65, 80);
+        doc.text('NET SAVINGS', 110, 80);
+        doc.text('SAVINGS RATE', 155, 80);
 
-      // Card Values
-      doc.setFontSize(12);
-      doc.setTextColor(30, 30, 30);
-      doc.text(`${currencySymbol}${totalReported.toLocaleString()}`, 20, 92);
-      doc.text(`${currencySymbol}${totalActual.toLocaleString()}`, 65, 92);
-      
-      if (totalSaved >= 0) {
-        doc.setTextColor(34, 139, 34); // Green
-        doc.text(`+${currencySymbol}${totalSaved.toLocaleString()}`, 110, 92);
+        // Card Values
+        doc.setFontSize(12);
+        doc.setTextColor(30, 30, 30);
+        doc.text(`${currencySymbol}${totalReported.toLocaleString()}`, 20, 92);
+        doc.text(`${currencySymbol}${totalActual.toLocaleString()}`, 65, 92);
+        
+        if (totalSaved >= 0) {
+          doc.setTextColor(34, 139, 34); // Green
+          doc.text(`+${currencySymbol}${totalSaved.toLocaleString()}`, 110, 92);
+        } else {
+          doc.setTextColor(178, 34, 34); // Red
+          doc.text(`-${currencySymbol}${Math.abs(totalSaved).toLocaleString()}`, 110, 92);
+        }
+        
+        doc.setTextColor(30, 30, 30);
+        doc.text(`${savingsRate.toFixed(1)}%`, 155, 92);
+      } else if (type === 'actual') {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(130, 130, 130);
+        doc.text('TOTAL ACTUAL SPEND', 20, 80);
+        doc.text('TOTAL TRANSACTIONS', 110, 80);
+
+        doc.setFontSize(14);
+        doc.setTextColor(30, 30, 30);
+        doc.text(`${currencySymbol}${totalActual.toLocaleString()}`, 20, 92);
+        doc.text(`${filteredTransactions.length} entries`, 110, 92);
       } else {
-        doc.setTextColor(178, 34, 34); // Red
-        doc.text(`-${currencySymbol}${Math.abs(totalSaved).toLocaleString()}`, 110, 92);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(130, 130, 130);
+        doc.text('TOTAL REPORTED BUDGET', 20, 80);
+        doc.text('TOTAL TRANSACTIONS', 110, 80);
+
+        doc.setFontSize(14);
+        doc.setTextColor(30, 30, 30);
+        doc.text(`${currencySymbol}${totalReported.toLocaleString()}`, 20, 92);
+        doc.text(`${filteredTransactions.length} entries`, 110, 92);
       }
-      
-      doc.setTextColor(30, 30, 30);
-      doc.text(`${savingsRate.toFixed(1)}%`, 155, 92);
 
       // Build Table Data
       let headers: string[][] = [];
