@@ -155,31 +155,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      // Only update state + cache if Supabase returned actual data.
-      // If it returned 0 (e.g. token not ready yet), leave existing cached state untouched.
+      // Only update state if Supabase returned actual data.
+      // NEVER reset to zero here — zero state is only allowed on explicit sign-out.
       if (finalTxs.length > 0 || finalTrs.length > 0) {
         setTransactions(finalTxs);
         setTransfers(finalTrs);
         saveToCache(userId, finalTxs, finalTrs);
       }
-      // If genuinely 0 AND no cache exists, then show 0 (new account)
-      else {
-        const hasCachedTx = !!localStorage.getItem(CACHE_KEY_TX(userId));
-        const hasCachedTr = !!localStorage.getItem(CACHE_KEY_TR(userId));
-        if (!hasCachedTx && !hasCachedTr) {
-          setTransactions([]);
-          setTransfers([]);
-        }
-        // else: keep the cache-loaded state — Supabase returned empty due to token timing
-      }
+      // If 0 rows returned, do nothing — keep whatever is currently shown.
     } catch (err) {
       console.error('Failed to load user data from Supabase:', err);
-      setDbError(
-        err instanceof Error
-          ? `Database Sync Error: ${err.message}.`
-          : 'Database Sync Error: Failed to fetch data from Supabase.'
-      );
-      // Do NOT reset state on error — keep cached data visible
+      // Do NOT reset state on error — keep existing display.
     }
   };
 
@@ -213,6 +199,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Show cached data instantly while fresh Supabase fetch runs
         loadFromCache(freshUser.id);
         await fetchUserData(freshUser.id);
+
+        // Retry once after 3s in case the JWT wasn't fully refreshed on the first attempt
+        setTimeout(async () => {
+          if (isMounted) await fetchUserData(freshUser.id);
+        }, 3000);
       }
       if (isMounted) {
         setIsLoading(false);
