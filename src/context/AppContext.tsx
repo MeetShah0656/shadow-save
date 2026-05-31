@@ -179,48 +179,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     let isMounted = true;
 
-    // Safety timeout: if auth takes more than 3 seconds, stop showing the loader
+    // Safety timeout: if auth takes more than 5 seconds, stop showing the loader
     const timeoutId = setTimeout(() => {
       if (isMounted) {
         console.warn("Auth initialization timed out. Disabling loader.");
         setIsLoading(false);
       }
-    }, 3000);
+    }, 5000);
 
-    const initAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (isMounted) {
-          const currentUser = session?.user ?? null;
-          setUser(currentUser);
-          if (currentUser) {
-            await fetchUserData(currentUser.id);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching initial session:", err);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-          clearTimeout(timeoutId);
-        }
-      }
-    };
-
-    initAuth();
-
-    // Subscribe to auth state changes
+    // Use ONLY onAuthStateChange — it fires with INITIAL_SESSION on page load
+    // AFTER the session token is fully re-established in the Supabase client,
+    // which guarantees RLS-protected queries work correctly.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      
+
       if (currentUser) {
         await fetchUserData(currentUser.id);
       } else {
         setTransactions([]);
         setTransfers([]);
       }
+
       setIsLoading(false);
       clearTimeout(timeoutId);
     });
