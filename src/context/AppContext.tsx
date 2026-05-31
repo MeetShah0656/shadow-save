@@ -137,6 +137,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             finalTxs = localTxs;
           } else {
             console.error('Migration of transactions failed:', upsertErr);
+            setDbError(`Transaction migration failed: ${upsertErr.message}. Make sure RLS is enabled and policies are set.`);
           }
         }
 
@@ -156,6 +157,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             finalTrs = localTrs;
           } else {
             console.error('Migration of transfers failed:', upsertErr);
+            setDbError(`Transfer migration failed: ${upsertErr.message}. Make sure RLS is enabled and policies are set.`);
           }
         }
       }
