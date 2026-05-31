@@ -179,26 +179,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     let isMounted = true;
 
-    // Safety timeout: if auth takes more than 5 seconds, stop showing the loader
+    // Safety timeout: if auth takes more than 8 seconds, stop loading
     const timeoutId = setTimeout(() => {
       if (isMounted) {
-        console.warn("Auth initialization timed out. Disabling loader.");
+        console.warn("Auth initialization timed out.");
         setIsLoading(false);
       }
-    }, 5000);
+    }, 8000);
 
-    // Use ONLY onAuthStateChange — it fires with INITIAL_SESSION on page load
-    // AFTER the session token is fully re-established in the Supabase client,
-    // which guarantees RLS-protected queries work correctly.
+    // Phase 1: getSession() reliably handles page-reload token refresh.
+    // It waits for the Supabase client to restore + refresh the stored token
+    // before resolving, so RLS-protected queries are guaranteed to work.
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        await fetchUserData(currentUser.id);
+      }
+      if (isMounted) {
+        setIsLoading(false);
+        clearTimeout(timeoutId);
+      }
+    });
+
+    // Phase 2: Listen for SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED.
+    // We skip INITIAL_SESSION because Phase 1 handles it more reliably.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
+      if (event === 'INITIAL_SESSION') return; // handled by getSession() above
 
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
-      if (currentUser) {
-        await fetchUserData(currentUser.id);
-      } else {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (currentUser) {
+          await fetchUserData(currentUser.id);
+        }
+      } else if (event === 'SIGNED_OUT') {
         setTransactions([]);
         setTransfers([]);
       }
