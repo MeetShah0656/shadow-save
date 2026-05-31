@@ -27,7 +27,8 @@ export default function Dashboard() {
     streak, 
     milestones, 
     currencySymbol, 
-    deleteTransaction 
+    deleteTransaction,
+    isPrivacyMode
   } = useApp();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -96,7 +97,10 @@ export default function Dashboard() {
             Finance Overview <Sparkles className="w-5 h-5 text-cream animate-pulse" />
           </h2>
           <p className="text-xs md:text-sm text-muted-text">
-            Compare reported amounts versus actual spend to optimize your saving habits.
+            {isPrivacyMode 
+              ? 'Track and manage your logging entries cleanly.'
+              : 'Compare reported amounts versus actual spend to optimize your saving habits.'
+            }
           </p>
         </div>
         <button
@@ -108,37 +112,39 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* 4 Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Summary Cards */}
+      <div className={`grid grid-cols-1 ${isPrivacyMode ? 'sm:grid-cols-1 lg:grid-cols-1 max-w-sm' : 'sm:grid-cols-2 lg:grid-cols-4'} gap-4`}>
         {[
           { 
-            title: 'Total Reported', 
+            title: isPrivacyMode ? 'Total Amount' : 'Total Reported', 
             value: totalReported, 
             icon: TrendingUp, 
             color: 'text-cream', 
             bg: 'bg-cream/5 border-cream/10' 
           },
-          { 
-            title: 'Actual Spend', 
-            value: totalSpend, 
-            icon: TrendingDown, 
-            color: 'text-danger', 
-            bg: 'bg-danger/5 border-danger/10' 
-          },
-          { 
-            title: 'Total Saved', 
-            value: totalSaved, 
-            icon: PiggyBank, 
-            color: 'text-success', 
-            bg: 'bg-success/5 border-success/10' 
-          },
-          { 
-            title: 'Savings Rate', 
-            value: `${savingsRate.toFixed(1)}%`, 
-            icon: Percent, 
-            color: 'text-warning', 
-            bg: 'bg-warning/5 border-warning/10' 
-          },
+          ...(!isPrivacyMode ? [
+            { 
+              title: 'Actual Spend', 
+              value: totalSpend, 
+              icon: TrendingDown, 
+              color: 'text-danger', 
+              bg: 'bg-danger/5 border-danger/10' 
+            },
+            { 
+              title: 'Total Saved', 
+              value: totalSaved, 
+              icon: PiggyBank, 
+              color: 'text-success', 
+              bg: 'bg-success/5 border-success/10' 
+            },
+            { 
+              title: 'Savings Rate', 
+              value: `${savingsRate.toFixed(1)}%`, 
+              icon: Percent, 
+              color: 'text-warning', 
+              bg: 'bg-warning/5 border-warning/10' 
+            },
+          ] : [])
         ].map((card, idx) => {
           const Icon = card.icon;
           return (
@@ -174,10 +180,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Weekly & Monthly summary module */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className={isPrivacyMode ? "lg:col-span-3 space-y-6" : "lg:col-span-2 space-y-6"}>
           <div className="glass-card p-6 rounded-2xl border border-surface-border">
             <h3 className="text-base font-bold text-cream mb-4 flex items-center gap-2">
-              <Calendar className="w-4 h-4" /> Weekly & Monthly Reports
+              <Calendar className="w-4 h-4" /> {isPrivacyMode ? 'Ledger Reports' : 'Weekly & Monthly Reports'}
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,17 +195,21 @@ export default function Dashboard() {
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-text">Reported Budget</span>
+                    <span className="text-muted-text">{isPrivacyMode ? 'Total Amount' : 'Reported Budget'}</span>
                     <span className="font-semibold text-cream">{currencySymbol}{weeklyReported.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-text">Actual Spending</span>
-                    <span className="font-semibold text-danger">{currencySymbol}{weeklySpend.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-surface-border/50">
-                    <span className="text-xs font-bold text-success">Saved Amount</span>
-                    <span className="text-sm font-bold text-success">{currencySymbol}{weeklySaved.toLocaleString()}</span>
-                  </div>
+                  {!isPrivacyMode && (
+                    <>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-text">Actual Spending</span>
+                        <span className="font-semibold text-danger">{currencySymbol}{weeklySpend.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-surface-border/50">
+                        <span className="text-xs font-bold text-success">Saved Amount</span>
+                        <span className="text-sm font-bold text-success">{currencySymbol}{weeklySaved.toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -211,20 +221,24 @@ export default function Dashboard() {
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-text">Reported Budget</span>
+                    <span className="text-muted-text">{isPrivacyMode ? 'Total Amount' : 'Reported Budget'}</span>
                     <span className="font-semibold text-cream">{currencySymbol}{monthlyReported.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-text">Actual Spending</span>
-                    <span className="font-semibold text-danger">{currencySymbol}{monthlySpend.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-surface-border/50">
-                    <div>
-                      <span className="text-xs block font-bold text-success">Saved Amount</span>
-                      <span className="text-[9px] text-muted-text">Rate: {monthlySavingsRate.toFixed(1)}%</span>
-                    </div>
-                    <span className="text-sm font-bold text-success">{currencySymbol}{monthlySaved.toLocaleString()}</span>
-                  </div>
+                  {!isPrivacyMode && (
+                    <>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-text">Actual Spending</span>
+                        <span className="font-semibold text-danger">{currencySymbol}{monthlySpend.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-surface-border/50">
+                        <div>
+                          <span className="text-xs block font-bold text-success">Saved Amount</span>
+                          <span className="text-[9px] text-muted-text">Rate: {monthlySavingsRate.toFixed(1)}%</span>
+                        </div>
+                        <span className="text-sm font-bold text-success">{currencySymbol}{monthlySaved.toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -256,9 +270,15 @@ export default function Dashboard() {
                     <tr className="border-b border-surface-border text-muted-text">
                       <th className="py-2.5 font-semibold">Date</th>
                       <th className="py-2.5 font-semibold">Category</th>
-                      <th className="py-2.5 font-semibold text-right">Reported</th>
-                      <th className="py-2.5 font-semibold text-right">Actual</th>
-                      <th className="py-2.5 font-semibold text-right">Saved</th>
+                      {isPrivacyMode ? (
+                        <th className="py-2.5 font-semibold text-right">Amount</th>
+                      ) : (
+                        <>
+                          <th className="py-2.5 font-semibold text-right">Reported</th>
+                          <th className="py-2.5 font-semibold text-right">Actual</th>
+                          <th className="py-2.5 font-semibold text-right">Saved</th>
+                        </>
+                      )}
                       <th className="py-2.5 font-semibold text-center">Actions</th>
                     </tr>
                   </thead>
@@ -271,9 +291,15 @@ export default function Dashboard() {
                             {tx.category}
                           </span>
                         </td>
-                        <td className="py-3 text-right text-muted-text">{currencySymbol}{tx.reported_amount.toLocaleString()}</td>
-                        <td className="py-3 text-right text-muted-text">{currencySymbol}{tx.actual_spend.toLocaleString()}</td>
-                        <td className="py-3 text-right font-bold text-success">+{currencySymbol}{tx.saved_amount.toLocaleString()}</td>
+                        {isPrivacyMode ? (
+                          <td className="py-3 text-right font-medium text-cream">{currencySymbol}{tx.reported_amount.toLocaleString()}</td>
+                        ) : (
+                          <>
+                            <td className="py-3 text-right text-muted-text">{currencySymbol}{tx.reported_amount.toLocaleString()}</td>
+                            <td className="py-3 text-right text-muted-text">{currencySymbol}{tx.actual_spend.toLocaleString()}</td>
+                            <td className="py-3 text-right font-bold text-success">+{currencySymbol}{tx.saved_amount.toLocaleString()}</td>
+                          </>
+                        )}
                         <td className="py-3">
                           <div className="flex justify-center items-center gap-2">
                             <button
@@ -302,97 +328,98 @@ export default function Dashboard() {
         </div>
 
         {/* Gamification & Streaks Sidebar widgets */}
-        <div className="space-y-6">
-          {/* Streak Widget */}
-          <div className="glass-card p-6 rounded-2xl border border-surface-border bg-gradient-to-br from-warning/10 to-danger/5 relative overflow-hidden">
-            <div className="absolute right-0 bottom-0 translate-x-3 translate-y-3 text-warning/5 pointer-events-none">
-              <Flame className="w-32 h-32 fill-current" />
-            </div>
-            
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-base font-bold text-cream">Savings Streak</h3>
-                <p className="text-[11px] text-muted-text mt-0.5">Consecutive days saving money</p>
+        {!isPrivacyMode && (
+          <div className="space-y-6">
+            {/* Streak Widget */}
+            <div className="glass-card p-6 rounded-2xl border border-surface-border bg-gradient-to-br from-warning/10 to-danger/5 relative overflow-hidden">
+              <div className="absolute right-0 bottom-0 translate-x-3 translate-y-3 text-warning/5 pointer-events-none">
+                <Flame className="w-32 h-32 fill-current" />
               </div>
-              <div className="p-2 bg-warning/20 border border-warning/25 rounded-xl text-warning">
-                <Flame className="w-5 h-5 fill-current animate-bounce" />
-              </div>
-            </div>
-
-            <div className="mt-6 text-center">
-              <h2 className="text-4xl font-extrabold text-warning tracking-tight">
-                {streak} Day{streak !== 1 ? 's' : ''}
-              </h2>
-              {streak > 0 ? (
-                <p className="text-xs text-cream mt-2 font-medium">
-                  Amazing habit! You saved money {streak} day{streak > 1 ? 's' : ''} in a row.
-                </p>
-              ) : (
-                <p className="text-xs text-muted-text mt-2">
-                  No active streak. Log a transaction with positive savings to start today!
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Gamification Milestones Widget */}
-          <div className="glass-card p-6 rounded-2xl border border-surface-border">
-            <h3 className="text-base font-bold text-cream mb-4 flex items-center gap-2">
-              <Award className="w-4 h-4 text-cream" /> Savings Badges
-            </h3>
-
-            {/* Next Badge Progress */}
-            {nextMilestone ? (
-              <div className="mb-6 p-3 bg-surface-hover border border-surface-border rounded-xl space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-muted-text font-medium">Next: {nextMilestone.title}</span>
-                  <span className="text-cream font-bold">{milestoneProgress.toFixed(0)}%</span>
+              
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-cream">Savings Streak</h3>
+                  <p className="text-[11px] text-muted-text mt-0.5">Consecutive days saving money</p>
                 </div>
-                <div className="w-full bg-surface-border rounded-full h-2 overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${milestoneProgress}%` }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className="bg-cream h-full rounded-full"
-                  />
-                </div>
-                <div className="text-[9.5px] text-muted-text">
-                  Save {currencySymbol}{(nextMilestone.target - totalSaved).toLocaleString()} more to unlock.
+                <div className="p-2 bg-warning/20 border border-warning/25 rounded-xl text-warning">
+                  <Flame className="w-5 h-5 fill-current animate-bounce" />
                 </div>
               </div>
-            ) : (
-              <div className="mb-6 p-3 bg-success/10 border border-success/20 rounded-xl flex items-center gap-2">
-                <Award className="w-5 h-5 text-success" />
-                <span className="text-xs font-semibold text-success">All Milestones Unlocked! 🏆</span>
-              </div>
-            )}
 
-            {/* Badges List */}
-            <div className="grid grid-cols-2 gap-3">
-              {milestones.map((m) => (
-                <div 
-                  key={m.id} 
-                  className={`p-3 border rounded-xl flex flex-col items-center justify-center text-center transition-all ${
-                    m.unlocked 
-                      ? 'bg-cream-dark/20 border-cream/20 text-cream' 
-                      : 'bg-surface border-surface-border/40 text-muted-text opacity-50'
-                  }`}
-                >
-                  <div className={`p-2 rounded-lg mb-2 ${m.unlocked ? 'bg-cream-dark/40 text-cream' : 'bg-surface-hover text-muted-text'}`}>
-                    {m.unlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+              <div className="mt-6 text-center">
+                <h2 className="text-4xl font-extrabold text-warning tracking-tight">
+                  {streak} Day{streak !== 1 ? 's' : ''}
+                </h2>
+                {streak > 0 ? (
+                  <p className="text-xs text-cream mt-2 font-medium">
+                    Amazing habit! You saved money {streak} day{streak > 1 ? 's' : ''} in a row.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-text mt-2">
+                    No active streak. Log a transaction with positive savings to start today!
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Gamification Milestones Widget */}
+            <div className="glass-card p-6 rounded-2xl border border-surface-border">
+              <h3 className="text-base font-bold text-cream mb-4 flex items-center gap-2">
+                <Award className="w-4 h-4 text-cream" /> Savings Badges
+              </h3>
+
+              {/* Next Badge Progress */}
+              {nextMilestone ? (
+                <div className="mb-6 p-3 bg-surface-hover border border-surface-border rounded-xl space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-text font-medium">Next: {nextMilestone.title}</span>
+                    <span className="text-cream font-bold">{milestoneProgress.toFixed(0)}%</span>
                   </div>
-                  <span className="text-[10px] font-bold tracking-tight block truncate max-w-full">
-                    {m.title}
-                  </span>
-                  <span className="text-[8.5px] opacity-75 mt-0.5">
-                    Total {currencySymbol}{m.target.toLocaleString()}
-                  </span>
+                  <div className="w-full bg-surface-border rounded-full h-2 overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${milestoneProgress}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                      className="bg-cream h-full rounded-full"
+                    />
+                  </div>
+                  <div className="text-[9.5px] text-muted-text">
+                    Save {currencySymbol}{(nextMilestone.target - totalSaved).toLocaleString()} more to unlock.
+                  </div>
                 </div>
-              ))}
+              ) : (
+                <div className="mb-6 p-3 bg-success/10 border border-success/20 rounded-xl flex items-center gap-2">
+                  <Award className="w-5 h-5 text-success" />
+                  <span className="text-xs font-semibold text-success">All Milestones Unlocked! 🏆</span>
+                </div>
+              )}
+
+              {/* Badges List */}
+              <div className="grid grid-cols-2 gap-3">
+                {milestones.map((m) => (
+                  <div 
+                    key={m.id} 
+                    className={`p-3 border rounded-xl flex flex-col items-center justify-center text-center transition-all ${
+                      m.unlocked 
+                        ? 'bg-cream-dark/20 border-cream/20 text-cream' 
+                        : 'bg-surface border-surface-border/40 text-muted-text opacity-50'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg mb-2 ${m.unlocked ? 'bg-cream-dark/40 text-cream' : 'bg-surface-hover text-muted-text'}`}>
+                      {m.unlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                    </div>
+                    <span className="text-[10px] font-bold tracking-tight block truncate max-w-full">
+                      {m.title}
+                    </span>
+                    <span className="text-[8.5px] opacity-75 mt-0.5">
+                      Total {currencySymbol}{m.target.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-
+        )}
       </div>
 
       {/* Add/Edit Modal */}

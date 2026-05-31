@@ -106,7 +106,7 @@ export const Login: React.FC<LoginProps> = ({ onBypassDemo }) => {
           </button>
 
           {/* Local storage bypass if config is missing */}
-          {!hasCredentials && onBypassDemo && (
+          {onBypassDemo && (
             <button
               onClick={onBypassDemo}
               className="w-full py-2.5 text-xs text-cream hover:underline font-semibold cursor-pointer"

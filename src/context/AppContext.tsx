@@ -40,6 +40,10 @@ interface AppContextType {
   updateSettings: (s: Partial<Settings>) => void;
   refreshData: () => void;
   signOut: () => Promise<void>;
+  isPrivacyMode: boolean;
+  hasPrivacyPin: boolean;
+  setPrivacyPin: (pin: string) => void;
+  togglePrivacyMode: (pin: string) => boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -51,6 +55,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [settings, setSettings] = useState<Settings>(getSettings());
   const [isLoading, setIsLoading] = useState(true);
+  const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
+  const [privacyPin, setPrivacyPinState] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const mode = localStorage.getItem('shadowsave_privacy_mode') === 'true';
+      const pin = localStorage.getItem('shadowsave_privacy_pin') || '';
+      setIsPrivacyMode(mode);
+      setPrivacyPinState(pin);
+    }
+  }, []);
+
+  const handleSetPrivacyPin = (pin: string) => {
+    localStorage.setItem('shadowsave_privacy_pin', pin);
+    setPrivacyPinState(pin);
+  };
+
+  const handleTogglePrivacyMode = (pin: string): boolean => {
+    if (isPrivacyMode) {
+      if (pin === privacyPin) {
+        localStorage.setItem('shadowsave_privacy_mode', 'false');
+        setIsPrivacyMode(false);
+        return true;
+      }
+      return false;
+    } else {
+      localStorage.setItem('shadowsave_privacy_mode', 'true');
+      setIsPrivacyMode(true);
+      return true;
+    }
+  };
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -110,8 +145,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    let isMounted = true;
+
+    // Safety timeout: if auth takes more than 3 seconds, stop showing the loader
+    const timeoutId = setTimeout(() => {
+      if (isMounted) {
+        console.warn("Auth initialization timed out. Disabling loader.");
+        setIsLoading(false);
+      }
+    }, 3000);
+
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (isMounted) {
+          const currentUser = session?.user ?? null;
+          setUser(currentUser);
+          if (currentUser) {
+            await fetchUserData(currentUser.id);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching initial session:", err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+          clearTimeout(timeoutId);
+        }
+      }
+    };
+
+    initAuth();
+
     // Subscribe to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       
@@ -122,9 +190,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setTransfers([]);
       }
       setIsLoading(false);
+      clearTimeout(timeoutId);
     });
 
     return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, [demoMode]);
@@ -286,6 +357,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSettings: handleUpdateSettings,
         refreshData,
         signOut: handleSignOut,
+        isPrivacyMode,
+        hasPrivacyPin: privacyPin !== '',
+        setPrivacyPin: handleSetPrivacyPin,
+        togglePrivacyMode: handleTogglePrivacyMode,
       }}
     >
       {children}
