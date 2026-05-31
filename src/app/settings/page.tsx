@@ -19,7 +19,6 @@ import { motion } from 'framer-motion';
 export default function Settings() {
   const { 
     user,
-    demoMode,
     settings, 
     updateSettings, 
     transactions, 
@@ -267,10 +266,10 @@ export default function Settings() {
             )}
             <div>
               <p className="text-xs font-bold text-cream text-left">
-                {user?.user_metadata?.full_name || (demoMode ? 'Local Developer' : 'Authenticated User')}
+                {user?.user_metadata?.full_name || 'Authenticated User'}
               </p>
               <p className="text-[10px] text-muted-text text-left">
-                {user?.email || (demoMode ? 'demo_mode@local.storage' : 'No email associated')}
+                {user?.email || 'No email associated'}
               </p>
             </div>
           </div>

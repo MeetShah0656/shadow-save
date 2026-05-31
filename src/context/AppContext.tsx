@@ -10,22 +10,16 @@ import {
   Settings,
   Milestone,
   getTransactions,
-  saveTransaction,
-  deleteTransaction as dbDeleteTransaction,
   getTransfers,
-  saveTransfer,
-  deleteTransfer as dbDeleteTransfer,
   getSettings,
   saveSettings,
   calculateStreak,
   getMilestones,
-  checkAndSeedDatabase,
   getCurrencySymbol
 } from '@/lib/db';
 
 interface AppContextType {
   user: User | null;
-  demoMode: boolean;
   transactions: Transaction[];
   transfers: Transfer[];
   settings: Settings;
@@ -51,7 +45,6 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [demoMode, setDemoMode] = useState<boolean>(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [settings, setSettings] = useState<Settings>(getSettings());
@@ -176,12 +169,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const refreshData = () => {
     setDbError('');
-    if (demoMode) {
-      const txs = getTransactions();
-      const trs = getTransfers();
-      setTransactions(txs);
-      setTransfers(trs);
-    } else if (user) {
+    if (user) {
       fetchUserData(user.id);
     }
     const sets = getSettings();
@@ -189,23 +177,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    // Check if env credentials are configured
-    const hasCredentials = 
-      !!process.env.NEXT_PUBLIC_SUPABASE_URL && 
-      (!!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
-
-    if (!hasCredentials) {
-      // Fallback to local storage demo mode
-      setDemoMode(true);
-      checkAndSeedDatabase();
-      const txs = getTransactions();
-      const trs = getTransfers();
-      setTransactions(txs);
-      setTransfers(trs);
-      setIsLoading(false);
-      return;
-    }
-
     let isMounted = true;
 
     // Safety timeout: if auth takes more than 3 seconds, stop showing the loader
@@ -259,14 +230,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
-  }, [demoMode]);
+  }, []);
 
   const handleAddTransaction = async (t: Omit<Transaction, 'id' | 'saved_amount' | 'created_at'> & { id?: string }) => {
-    if (demoMode || !user) {
-      saveTransaction(t);
-      refreshData();
-      return;
-    }
+    if (!user) return;
 
     setIsLoading(true);
     const savedAmount = t.reported_amount - t.actual_spend;
@@ -294,11 +261,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const handleDeleteTransaction = async (id: string) => {
-    if (demoMode || !user) {
-      dbDeleteTransaction(id);
-      refreshData();
-      return;
-    }
+    if (!user) return;
 
     setIsLoading(true);
     try {
@@ -314,11 +277,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const handleAddTransfer = async (t: Omit<Transfer, 'id' | 'created_at'> & { id?: string }) => {
-    if (demoMode || !user) {
-      saveTransfer(t);
-      refreshData();
-      return;
-    }
+    if (!user) return;
 
     setIsLoading(true);
     const trData = {
@@ -343,11 +302,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const handleDeleteTransfer = async (id: string) => {
-    if (demoMode || !user) {
-      dbDeleteTransfer(id);
-      refreshData();
-      return;
-    }
+    if (!user) return;
 
     setIsLoading(true);
     try {
@@ -371,7 +326,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsLoading(true);
     // Optimistically clear local auth states to prevent hanging on network/Supabase errors
     setUser(null);
-    setDemoMode(false);
     setIsLoading(false);
     
     try {
@@ -399,15 +353,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   }
 
-  if (!user && !demoMode) {
-    return <Login onBypassDemo={() => setDemoMode(true)} />;
+  if (!user) {
+    return <Login />;
   }
 
   return (
     <AppContext.Provider
       value={{
         user,
-        demoMode,
         transactions,
         transfers,
         settings,

@@ -5,11 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { PiggyBank, AlertCircle, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-interface LoginProps {
-  onBypassDemo?: () => void;
-}
-
-export const Login: React.FC<LoginProps> = ({ onBypassDemo }) => {
+export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -104,16 +100,6 @@ export const Login: React.FC<LoginProps> = ({ onBypassDemo }) => {
             )}
             <span>Sign In with Google</span>
           </button>
-
-          {/* Local storage bypass if config is missing */}
-          {onBypassDemo && (
-            <button
-              onClick={onBypassDemo}
-              className="w-full py-2.5 text-xs text-cream hover:underline font-semibold cursor-pointer"
-            >
-              Continue in Demo Mode (Local Storage Only)
-            </button>
-          )}
         </div>
 
         {/* Small warning about the required tables */}
