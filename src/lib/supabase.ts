@@ -1,20 +1,30 @@
 import { createClient } from '@supabase/supabase-js';
 
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project-url.supabase.co';
-const rawKey = 
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
-  'placeholder-anon-key';
+const getCleanEnv = (val: string | undefined, fallback: string): string => {
+  if (!val) return fallback;
+  const trimmed = val.trim().replace(/['"]/g, '');
+  return trimmed === '' ? fallback : trimmed;
+};
 
-// Clean values to prevent copy-paste spacing/quoting issues
-const supabaseUrl = rawUrl.trim().replace(/['"]/g, '');
-const supabaseAnonKey = rawKey.trim().replace(/['"]/g, '');
+const supabaseUrl = getCleanEnv(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  'https://placeholder-project-url.supabase.co'
+);
 
-const hasKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const supabaseAnonKey = getCleanEnv(
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  'placeholder-anon-key'
+);
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !hasKey) {
+const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL.trim() !== '';
+const hasKey = (
+  (!!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.trim() !== '') ||
+  (!!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.trim() !== '')
+);
+
+if (!hasUrl || !hasKey) {
   console.warn(
-    'Warning: Supabase credentials (NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) are missing in environment variables. Auth and database sync will fall back or fail.'
+    'Warning: Supabase credentials (NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) are missing or empty in environment variables. Auth and database sync will fall back or fail.'
   );
 }
 
