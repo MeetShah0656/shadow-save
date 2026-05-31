@@ -203,17 +203,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }, 8000);
 
-    // Phase 1: Immediately show cached data so the UI is never blank on reload,
-    // then fetch from Supabase and update (or keep cache if query returns empty).
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // Phase 1: getUser() validates the JWT with Supabase servers and refreshes
+    // it if expired — unlike getSession() which just reads stale storage.
+    // This guarantees the token is fresh so RLS SELECT policies work correctly.
+    supabase.auth.getUser().then(async ({ data: { user: freshUser } }) => {
       if (!isMounted) return;
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        // Show cached data instantly — eliminates any zero-flash
-        loadFromCache(currentUser.id);
-        // Then fetch fresh data from Supabase
-        await fetchUserData(currentUser.id);
+      if (freshUser) {
+        setUser(freshUser);
+        // Show cached data instantly while fresh Supabase fetch runs
+        loadFromCache(freshUser.id);
+        await fetchUserData(freshUser.id);
       }
       if (isMounted) {
         setIsLoading(false);
