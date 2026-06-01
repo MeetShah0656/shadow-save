@@ -9,6 +9,10 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+
   // Check if credentials are set
   const hasCredentials = 
     !!process.env.NEXT_PUBLIC_SUPABASE_URL && 
@@ -35,6 +39,46 @@ export const Login: React.FC = () => {
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'An error occurred during Google sign-in.');
+      setLoading(false);
+    }
+  };
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!hasCredentials) {
+      setError('Supabase environment variables are missing.');
+      return;
+    }
+    if (!email || !password) {
+      setError('Please fill in all fields.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          }
+        });
+        if (error) throw error;
+        alert('Check your email for confirmation link! (If auto-confirm is enabled in Supabase, you can sign in directly)');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'An error occurred during email auth.');
+    } finally {
       setLoading(false);
     }
   };
@@ -101,6 +145,56 @@ export const Login: React.FC = () => {
             <span>Sign In with Google</span>
           </button>
         </div>
+
+        {/* Separator */}
+        <div className="flex items-center justify-center gap-2 text-muted-text text-[11px] uppercase font-semibold">
+          <div className="h-[1px] bg-surface-border w-10" />
+          <span>or use email</span>
+          <div className="h-[1px] bg-surface-border w-10" />
+        </div>
+
+        {/* Email Password Form */}
+        <form onSubmit={handleEmailAuth} className="space-y-3 text-left">
+          <div>
+            <label className="block text-[10px] uppercase font-bold text-muted-text mb-1 tracking-wider">Email Address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-surface-hover border border-surface-border rounded-xl px-4 py-2.5 text-xs text-cream focus:outline-none focus:border-cream/50 transition-colors"
+              placeholder="you@example.com"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase font-bold text-muted-text mb-1 tracking-wider">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-surface-hover border border-surface-border rounded-xl px-4 py-2.5 text-xs text-cream focus:outline-none focus:border-cream/50 transition-colors"
+              placeholder="••••••••"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-cream hover:bg-cream-dim text-background font-bold py-2.5 px-4 rounded-xl transition-all cursor-pointer text-xs disabled:opacity-50 mt-1"
+          >
+            {loading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
+          </button>
+        </form>
+
+        {/* Toggle sign in/up */}
+        <p className="text-[11px] text-muted-text">
+          {isSignUp ? 'Already have an account?' : "Don't have an email account?"}{' '}
+          <button
+            type="button"
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="text-cream hover:underline font-semibold cursor-pointer"
+          >
+            {isSignUp ? 'Sign In' : 'Create Account'}
+          </button>
+        </p>
 
         {/* Small warning about the required tables */}
         {hasCredentials && (

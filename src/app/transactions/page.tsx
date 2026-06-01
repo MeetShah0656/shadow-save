@@ -23,7 +23,7 @@ type SortField = 'date' | 'reported_amount' | 'actual_spend' | 'saved_amount';
 type SortOrder = 'asc' | 'desc';
 
 export default function Transactions() {
-  const { transactions, currencySymbol, deleteTransaction, user, isPrivacyMode } = useApp();
+  const { transactions, currencySymbol, deleteTransaction, user } = useApp();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
@@ -284,7 +284,7 @@ export default function Transactions() {
       
       // Min savings match
       const minS = parseFloat(minSavings) || 0;
-      const matchesSavings = isPrivacyMode ? true : (tx.saved_amount >= minS);
+      const matchesSavings = tx.saved_amount >= minS;
 
       return matchesSearch && matchesCategory && matchesStart && matchesEnd && matchesSavings;
     })
@@ -339,61 +339,49 @@ export default function Transactions() {
         <div className="flex items-center gap-3 self-start sm:self-auto">
           {/* Export PDF Receipt Dropdown */}
           <div className="relative">
-            {isPrivacyMode ? (
-              <button
-                onClick={() => generateReceiptPDF('reported')}
-                className="flex items-center justify-center gap-2 bg-surface-hover hover:bg-surface-border text-cream border border-surface-border px-4 py-2.5 rounded-xl transition-all cursor-pointer font-semibold text-xs h-[38px]"
-              >
-                <Download className="w-4 h-4" />
-                <span>Export Receipt</span>
-              </button>
-            ) : (
+            <button
+              onClick={() => setIsExportOpen(!isExportOpen)}
+              className="flex items-center justify-center gap-2 bg-surface-hover hover:bg-surface-border text-cream border border-surface-border px-4 py-2.5 rounded-xl transition-all cursor-pointer font-semibold text-xs h-[38px]"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export Receipt</span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            </button>
+            {isExportOpen && (
               <>
-                <button
-                  onClick={() => setIsExportOpen(!isExportOpen)}
-                  className="flex items-center justify-center gap-2 bg-surface-hover hover:bg-surface-border text-cream border border-surface-border px-4 py-2.5 rounded-xl transition-all cursor-pointer font-semibold text-xs h-[38px]"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Export Receipt</span>
-                  <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                </button>
-                {isExportOpen && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-40" 
-                      onClick={() => setIsExportOpen(false)}
-                    />
-                    <div className="absolute right-0 mt-2 w-52 rounded-xl bg-surface border border-surface-border shadow-2xl p-1.5 z-50 flex flex-col space-y-1">
-                      <button
-                        onClick={() => {
-                          generateReceiptPDF('both');
-                          setIsExportOpen(false);
-                        }}
-                        className="w-full text-left px-3.5 py-2 text-xs text-cream hover:bg-surface-hover rounded-lg transition-colors cursor-pointer font-medium"
-                      >
-                        Comparison Receipt (Both)
-                      </button>
-                      <button
-                        onClick={() => {
-                          generateReceiptPDF('actual');
-                          setIsExportOpen(false);
-                        }}
-                        className="w-full text-left px-3.5 py-2 text-xs text-muted-text hover:bg-surface-hover hover:text-cream rounded-lg transition-colors cursor-pointer font-medium"
-                      >
-                        Actual Spend Only
-                      </button>
-                      <button
-                        onClick={() => {
-                          generateReceiptPDF('reported');
-                          setIsExportOpen(false);
-                        }}
-                        className="w-full text-left px-3.5 py-2 text-xs text-muted-text hover:bg-surface-hover hover:text-cream rounded-lg transition-colors cursor-pointer font-medium"
-                      >
-                        Reported Budget Only
-                      </button>
-                    </div>
-                  </>
-                )}
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setIsExportOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-52 rounded-xl bg-surface border border-surface-border shadow-2xl p-1.5 z-50 flex flex-col space-y-1">
+                  <button
+                    onClick={() => {
+                      generateReceiptPDF('both');
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs text-cream hover:bg-surface-hover rounded-lg transition-colors cursor-pointer font-medium"
+                  >
+                    Comparison Receipt (Both)
+                  </button>
+                  <button
+                    onClick={() => {
+                      generateReceiptPDF('actual');
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs text-muted-text hover:bg-surface-hover hover:text-cream rounded-lg transition-colors cursor-pointer font-medium"
+                  >
+                    Actual Spend Only
+                  </button>
+                  <button
+                    onClick={() => {
+                      generateReceiptPDF('reported');
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs text-muted-text hover:bg-surface-hover hover:text-cream rounded-lg transition-colors cursor-pointer font-medium"
+                  >
+                    Reported Budget Only
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -440,7 +428,7 @@ export default function Transactions() {
         </div>
 
         {/* Advanced Filters */}
-        <div className={`grid grid-cols-1 ${isPrivacyMode ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-4 pt-2 border-t border-surface-border/50`}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-surface-border/50">
           {/* Start Date */}
           <div>
             <label className="block text-[10px] font-semibold text-muted-text mb-1 uppercase tracking-wider">
@@ -474,25 +462,23 @@ export default function Transactions() {
           </div>
 
           {/* Min Savings */}
-          {!isPrivacyMode && (
-            <div>
-              <label className="block text-[10px] font-semibold text-muted-text mb-1 uppercase tracking-wider">
-                Min Savings ({currencySymbol})
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-2 text-xs font-semibold text-muted-text">
-                  {currencySymbol}
-                </span>
-                <input
-                  type="number"
-                  placeholder="e.g. 500"
-                  value={minSavings}
-                  onChange={(e) => setMinSavings(e.target.value)}
-                  className="w-full bg-surface-hover border border-surface-border rounded-xl py-2 pl-7 pr-3 text-xs text-foreground focus:outline-none focus:border-cream focus:ring-1 focus:ring-cream/20 transition-all font-semibold"
-                />
-              </div>
+          <div>
+            <label className="block text-[10px] font-semibold text-muted-text mb-1 uppercase tracking-wider">
+              Min Savings ({currencySymbol})
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-xs font-semibold text-muted-text">
+                {currencySymbol}
+              </span>
+              <input
+                type="number"
+                placeholder="e.g. 500"
+                value={minSavings}
+                onChange={(e) => setMinSavings(e.target.value)}
+                className="w-full bg-surface-hover border border-surface-border rounded-xl py-2 pl-7 pr-3 text-xs text-foreground focus:outline-none focus:border-cream focus:ring-1 focus:ring-cream/20 transition-all font-semibold"
+              />
             </div>
-          )}
+          </div>
         </div>
 
         {/* Clear Filters Indicator */}
@@ -547,46 +533,33 @@ export default function Transactions() {
                   </th>
                   {/* Category */}
                   <th className="py-3.5 px-4 font-semibold">Category</th>
-                  {isPrivacyMode ? (
-                    <th 
-                      onClick={() => handleSort('reported_amount')}
-                      className="py-3.5 px-4 font-semibold text-right cursor-pointer hover:text-cream transition-colors"
-                    >
-                      <span className="inline-flex items-center justify-end w-full">
-                        Amount <SortIndicator field="reported_amount" />
-                      </span>
-                    </th>
-                  ) : (
-                    <>
-                      {/* Reported Budget */}
-                      <th 
-                        onClick={() => handleSort('reported_amount')}
-                        className="py-3.5 px-4 font-semibold text-right cursor-pointer hover:text-cream transition-colors"
-                      >
-                        <span className="inline-flex items-center justify-end w-full">
-                          Reported <SortIndicator field="reported_amount" />
-                        </span>
-                      </th>
-                      {/* Actual Spend */}
-                      <th 
-                        onClick={() => handleSort('actual_spend')}
-                        className="py-3.5 px-4 font-semibold text-right cursor-pointer hover:text-cream transition-colors"
-                      >
-                        <span className="inline-flex items-center justify-end w-full">
-                          Actual Spend <SortIndicator field="actual_spend" />
-                        </span>
-                      </th>
-                      {/* Saved */}
-                      <th 
-                        onClick={() => handleSort('saved_amount')}
-                        className="py-3.5 px-4 font-semibold text-right cursor-pointer hover:text-cream transition-colors"
-                      >
-                        <span className="inline-flex items-center justify-end w-full">
-                          Saved <SortIndicator field="saved_amount" />
-                        </span>
-                      </th>
-                    </>
-                  )}
+                  {/* Reported Budget */}
+                  <th 
+                    onClick={() => handleSort('reported_amount')}
+                    className="py-3.5 px-4 font-semibold text-right cursor-pointer hover:text-cream transition-colors"
+                  >
+                    <span className="inline-flex items-center justify-end w-full">
+                      Reported <SortIndicator field="reported_amount" />
+                    </span>
+                  </th>
+                  {/* Actual Spend */}
+                  <th 
+                    onClick={() => handleSort('actual_spend')}
+                    className="py-3.5 px-4 font-semibold text-right cursor-pointer hover:text-cream transition-colors"
+                  >
+                    <span className="inline-flex items-center justify-end w-full">
+                      Actual Spend <SortIndicator field="actual_spend" />
+                    </span>
+                  </th>
+                  {/* Saved */}
+                  <th 
+                    onClick={() => handleSort('saved_amount')}
+                    className="py-3.5 px-4 font-semibold text-right cursor-pointer hover:text-cream transition-colors"
+                  >
+                    <span className="inline-flex items-center justify-end w-full">
+                      Saved <SortIndicator field="saved_amount" />
+                    </span>
+                  </th>
                   {/* Notes */}
                   <th className="py-3.5 px-6 font-semibold">Notes</th>
                   {/* Actions */}
@@ -608,22 +581,16 @@ export default function Transactions() {
                           {tx.category}
                         </span>
                       </td>
-                      {isPrivacyMode ? (
-                        <td className="py-4 px-4 text-right text-cream font-medium">{currencySymbol}{tx.reported_amount.toLocaleString()}</td>
-                      ) : (
-                        <>
-                          <td className="py-4 px-4 text-right text-muted-text font-medium">{currencySymbol}{tx.reported_amount.toLocaleString()}</td>
-                          <td className="py-4 px-4 text-right text-muted-text font-medium">{currencySymbol}{tx.actual_spend.toLocaleString()}</td>
-                          <td className="py-4 px-4 text-right whitespace-nowrap">
-                            <div className="font-bold text-success">
-                              +{currencySymbol}{tx.saved_amount.toLocaleString()}
-                            </div>
-                            <div className="text-[9.5px] text-muted-text">
-                              {rate.toFixed(0)}% saved
-                            </div>
-                          </td>
-                        </>
-                      )}
+                      <td className="py-4 px-4 text-right text-muted-text font-medium">{currencySymbol}{tx.reported_amount.toLocaleString()}</td>
+                      <td className="py-4 px-4 text-right text-muted-text font-medium">{currencySymbol}{tx.actual_spend.toLocaleString()}</td>
+                      <td className="py-4 px-4 text-right whitespace-nowrap">
+                        <div className="font-bold text-success">
+                          +{currencySymbol}{tx.saved_amount.toLocaleString()}
+                        </div>
+                        <div className="text-[9.5px] text-muted-text">
+                          {rate.toFixed(0)}% saved
+                        </div>
+                      </td>
                       <td className="py-4 px-6 text-muted-text font-normal max-w-[200px] truncate" title={tx.notes}>
                         {tx.notes || <span className="opacity-40 italic">-</span>}
                       </td>
@@ -659,11 +626,9 @@ export default function Transactions() {
             <span>
               Total: {filteredTransactions.length} logged transaction{filteredTransactions.length > 1 ? 's' : ''}
             </span>
-            {!isPrivacyMode && (
-              <span className="font-semibold text-cream">
-                Total Filtered Savings: {currencySymbol}{filteredTransactions.reduce((acc, t) => acc + t.saved_amount, 0).toLocaleString()}
-              </span>
-            )}
+            <span className="font-semibold text-cream">
+              Total Filtered Savings: {currencySymbol}{filteredTransactions.reduce((acc, t) => acc + t.saved_amount, 0).toLocaleString()}
+            </span>
           </div>
         )}
       </div>

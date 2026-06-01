@@ -21,12 +21,11 @@ import {
   TrendingUp, 
   PieChart as PieIcon, 
   BarChart3, 
-  CalendarRange,
-  Lock
+  CalendarRange
 } from 'lucide-react';
 
 export default function Analytics() {
-  const { transactions, currencySymbol, isPrivacyMode } = useApp();
+  const { transactions, currencySymbol } = useApp();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -42,19 +41,7 @@ export default function Analytics() {
     );
   }
 
-  if (isPrivacyMode) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
-        <div className="p-4 bg-danger/10 border border-danger/20 rounded-3xl text-danger mb-4 animate-pulse">
-          <Lock className="w-8 h-8" />
-        </div>
-        <h2 className="text-lg font-bold text-cream">Analytics Locked</h2>
-        <p className="text-xs text-muted-text max-w-sm mx-auto mt-1">
-          Detailed savings graphs and category analytics are shielded. Unlock Private Ledger Mode to view.
-        </p>
-      </div>
-    );
-  }
+
 
   if (transactions.length === 0) {
     return (

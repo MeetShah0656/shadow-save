@@ -10,8 +10,7 @@ import {
   AlertCircle,
   CheckCircle2,
   PiggyBank,
-  Check,
-  Lock
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -21,8 +20,7 @@ export default function Transfers() {
     transfers, 
     currencySymbol, 
     addTransfer, 
-    deleteTransfer,
-    isPrivacyMode
+    deleteTransfer
   } = useApp();
 
   const [mounted, setMounted] = useState(false);
@@ -53,19 +51,7 @@ export default function Transfers() {
     );
   }
 
-  if (isPrivacyMode) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
-        <div className="p-4 bg-danger/10 border border-danger/20 rounded-3xl text-danger mb-4 animate-pulse">
-          <Lock className="w-8 h-8" />
-        </div>
-        <h2 className="text-lg font-bold text-cream">Transfers Locked</h2>
-        <p className="text-xs text-muted-text max-w-sm mx-auto mt-1">
-          Savings transfers and metrics are shielded. Unlock Private Ledger Mode to view.
-        </p>
-      </div>
-    );
-  }
+
 
   // Compute Metrics
   const totalGenerated = transactions.reduce((acc, t) => acc + t.saved_amount, 0);
