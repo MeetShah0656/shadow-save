@@ -343,9 +343,18 @@ export default function Transfers() {
                           </div>
                           
                           <button
-                            onClick={() => deleteTransfer(tr.id)}
-                            className="p-1.5 bg-surface-hover border border-surface-border text-muted-text hover:text-danger rounded-lg transition-colors cursor-pointer opacity-80 md:opacity-0 md:group-hover:opacity-100"
-                            title="Delete Log"
+                            disabled={isPrivacyMode}
+                            onClick={() => {
+                              if (window.confirm("Are you sure you want to delete this transfer?")) {
+                                deleteTransfer(tr.id);
+                              }
+                            }}
+                            className={`p-1.5 bg-surface-hover border border-surface-border text-muted-text rounded-lg transition-colors opacity-80 md:opacity-0 md:group-hover:opacity-100 ${
+                              isPrivacyMode 
+                                ? 'opacity-30 cursor-not-allowed' 
+                                : 'hover:text-danger cursor-pointer'
+                            }`}
+                            title={isPrivacyMode ? "Unlock to Delete" : "Delete Log"}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

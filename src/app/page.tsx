@@ -298,16 +298,30 @@ export default function Dashboard() {
                         <td className="py-3">
                           <div className="flex justify-center items-center gap-2">
                             <button
+                              disabled={isPrivacyMode}
                               onClick={() => handleEdit(tx.id)}
-                              className="p-1 text-muted-text hover:text-cream rounded transition-colors cursor-pointer"
-                              title="Edit Entry"
+                              className={`p-1 text-muted-text rounded transition-colors ${
+                                isPrivacyMode 
+                                  ? 'opacity-30 cursor-not-allowed' 
+                                  : 'hover:text-cream cursor-pointer'
+                              }`}
+                              title={isPrivacyMode ? "Unlock to Edit" : "Edit Entry"}
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => deleteTransaction(tx.id)}
-                              className="p-1 text-muted-text hover:text-danger rounded transition-colors cursor-pointer"
-                              title="Delete Entry"
+                              disabled={isPrivacyMode}
+                              onClick={() => {
+                                if (window.confirm("Are you sure you want to delete this transaction?")) {
+                                  deleteTransaction(tx.id);
+                                }
+                              }}
+                              className={`p-1 text-muted-text rounded transition-colors ${
+                                isPrivacyMode 
+                                  ? 'opacity-30 cursor-not-allowed' 
+                                  : 'hover:text-danger cursor-pointer'
+                              }`}
+                              title={isPrivacyMode ? "Unlock to Delete" : "Delete Entry"}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

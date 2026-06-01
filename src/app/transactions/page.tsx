@@ -601,16 +601,30 @@ export default function Transactions() {
                       <td className="py-4 px-6">
                         <div className="flex justify-center items-center gap-2">
                           <button
+                            disabled={isPrivacyMode}
                             onClick={() => handleEdit(tx.id)}
-                            className="p-1.5 bg-surface-hover border border-surface-border text-muted-text hover:text-cream rounded-lg transition-colors cursor-pointer"
-                            title="Edit"
+                            className={`p-1.5 bg-surface-hover border border-surface-border text-muted-text rounded-lg transition-colors ${
+                              isPrivacyMode 
+                                ? 'opacity-30 cursor-not-allowed' 
+                                : 'hover:text-cream cursor-pointer'
+                            }`}
+                            title={isPrivacyMode ? "Unlock to Edit" : "Edit"}
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => deleteTransaction(tx.id)}
-                            className="p-1.5 bg-surface-hover border border-surface-border text-muted-text hover:text-danger rounded-lg transition-colors cursor-pointer"
-                            title="Delete"
+                            disabled={isPrivacyMode}
+                            onClick={() => {
+                              if (window.confirm("Are you sure you want to delete this transaction?")) {
+                                deleteTransaction(tx.id);
+                              }
+                            }}
+                            className={`p-1.5 bg-surface-hover border border-surface-border text-muted-text rounded-lg transition-colors ${
+                              isPrivacyMode 
+                                ? 'opacity-30 cursor-not-allowed' 
+                                : 'hover:text-danger cursor-pointer'
+                            }`}
+                            title={isPrivacyMode ? "Unlock to Delete" : "Delete"}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
