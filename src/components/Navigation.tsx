@@ -426,6 +426,7 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
               ref={inputRef}
               type="tel"
               pattern="[0-9]*"
+              inputMode="none"
               maxLength={4}
               value={pinAction === 'set' && pinStep === 'confirm_new' ? confirmPinValue : pinValue}
               onChange={(e) => handleHiddenInputChange(e.target.value)}
