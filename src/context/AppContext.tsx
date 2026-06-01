@@ -132,7 +132,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // If 0 rows returned, do nothing — keep whatever is currently shown.
     } catch (err) {
       console.error('Failed to load user data from Supabase:', err);
-      // Do NOT reset state on error — keep existing display.
+      setDbError(err instanceof Error ? err.message : 'Failed to synchronize with Supabase backend.');
     }
   };
 
@@ -163,8 +163,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const currentUser = session?.user ?? null;
 
-      if (event === 'INITIAL_SESSION') {
-        // Page reload — session is restored from storage
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setUser(currentUser);
         if (currentUser) {
           // Show cached data immediately so the UI is never blank
@@ -173,23 +172,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // If expired, TOKEN_REFRESHED will fire shortly and re-fetch
           fetchUserData(currentUser.id);
         }
-        setIsLoading(false);
-        clearTimeout(timeoutId);
-
-      } else if (event === 'SIGNED_IN') {
-        // Fresh login — token is always valid here
-        setUser(currentUser);
-        if (currentUser) {
-          await fetchUserData(currentUser.id);
-        }
-        setIsLoading(false);
-        clearTimeout(timeoutId);
-
-      } else if (event === 'TOKEN_REFRESHED') {
-        // Access token was expired and has now been refreshed — re-fetch with valid token
-        setUser(currentUser);
-        if (currentUser) {
-          await fetchUserData(currentUser.id);
+        if (event !== 'TOKEN_REFRESHED') {
+          setIsLoading(false);
+          clearTimeout(timeoutId);
         }
 
       } else if (event === 'SIGNED_OUT') {
