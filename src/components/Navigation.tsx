@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
@@ -32,6 +32,15 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
   } = useApp();
 
   const [showPinModal, setShowPinModal] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showPinModal && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [showPinModal]);
   const [pinAction, setPinAction] = useState<'set' | 'enter'>('enter');
   const [pinStep, setPinStep] = useState<'enter_new' | 'confirm_new'>('enter_new');
   const [pinValue, setPinValue] = useState('');
@@ -308,10 +317,17 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
       {/* PIN Verification / Creation Modal Overlay */}
       {showPinModal && (
         <div className="fixed inset-0 bg-background/85 backdrop-blur-xl z-55 flex items-center justify-center p-4">
-          <div className="bg-surface border border-surface-border rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl relative">
+          <div 
+            onClick={() => inputRef.current?.focus()}
+            className="bg-surface border border-surface-border rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl relative"
+          >
             <button
-              onClick={() => setShowPinModal(false)}
-              className="absolute right-4 top-4 p-1.5 rounded-lg bg-surface-hover border border-surface-border text-muted-text hover:text-cream cursor-pointer"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPinModal(false);
+              }}
+              className="absolute right-4 top-4 p-1.5 rounded-lg bg-surface-hover border border-surface-border text-muted-text hover:text-cream cursor-pointer z-10"
             >
               <X className="w-4.5 h-4.5" />
             </button>
@@ -363,27 +379,43 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                 <button
                   key={num}
-                  onClick={() => handleKeypadPress(num.toString())}
-                  className="py-3 bg-surface-hover hover:bg-surface-border text-cream font-bold rounded-xl transition-colors cursor-pointer text-sm border border-surface-border/40"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleKeypadPress(num.toString());
+                  }}
+                  className="py-3 bg-surface-hover hover:bg-surface-border text-cream font-bold rounded-xl transition-colors cursor-pointer text-sm border border-surface-border/40 z-10"
                 >
                   {num}
                 </button>
               ))}
               <button
-                onClick={handleKeypadClear}
-                className="py-3 text-muted-text hover:text-cream font-medium rounded-xl transition-colors cursor-pointer text-xs"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleKeypadClear();
+                }}
+                className="py-3 text-muted-text hover:text-cream font-medium rounded-xl transition-colors cursor-pointer text-xs z-10"
               >
                 Clear
               </button>
               <button
-                onClick={() => handleKeypadPress('0')}
-                className="py-3 bg-surface-hover hover:bg-surface-border text-cream font-bold rounded-xl transition-colors cursor-pointer text-sm border border-surface-border/40"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleKeypadPress('0');
+                }}
+                className="py-3 bg-surface-hover hover:bg-surface-border text-cream font-bold rounded-xl transition-colors cursor-pointer text-sm border border-surface-border/40 z-10"
               >
                 0
               </button>
               <button
-                onClick={handleKeypadBackspace}
-                className="py-3 text-muted-text hover:text-cream font-medium rounded-xl transition-colors cursor-pointer text-xs"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleKeypadBackspace();
+                }}
+                className="py-3 text-muted-text hover:text-cream font-medium rounded-xl transition-colors cursor-pointer text-xs z-10"
               >
                 Delete
               </button>
@@ -391,12 +423,13 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
 
             {/* Invisible Mobile Keyboard Input */}
             <input
+              ref={inputRef}
               type="tel"
               pattern="[0-9]*"
               maxLength={4}
               value={pinAction === 'set' && pinStep === 'confirm_new' ? confirmPinValue : pinValue}
               onChange={(e) => handleHiddenInputChange(e.target.value)}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-default"
+              className="absolute top-0 left-0 w-0 h-0 opacity-0 pointer-events-none"
               autoFocus
             />
           </div>
