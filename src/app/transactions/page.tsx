@@ -23,7 +23,7 @@ type SortField = 'date' | 'reported_amount' | 'actual_spend' | 'saved_amount';
 type SortOrder = 'asc' | 'desc';
 
 export default function Transactions() {
-  const { transactions, currencySymbol, deleteTransaction, user } = useApp();
+  const { transactions, currencySymbol, deleteTransaction, user, isPrivacyMode } = useApp();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
@@ -354,24 +354,28 @@ export default function Transactions() {
                   onClick={() => setIsExportOpen(false)}
                 />
                 <div className="absolute right-0 mt-2 w-52 rounded-xl bg-surface border border-surface-border shadow-2xl p-1.5 z-50 flex flex-col space-y-1">
-                  <button
-                    onClick={() => {
-                      generateReceiptPDF('both');
-                      setIsExportOpen(false);
-                    }}
-                    className="w-full text-left px-3.5 py-2 text-xs text-cream hover:bg-surface-hover rounded-lg transition-colors cursor-pointer font-medium"
-                  >
-                    Comparison Receipt (Both)
-                  </button>
-                  <button
-                    onClick={() => {
-                      generateReceiptPDF('actual');
-                      setIsExportOpen(false);
-                    }}
-                    className="w-full text-left px-3.5 py-2 text-xs text-muted-text hover:bg-surface-hover hover:text-cream rounded-lg transition-colors cursor-pointer font-medium"
-                  >
-                    Actual Spend Only
-                  </button>
+                  {!isPrivacyMode && (
+                    <>
+                      <button
+                        onClick={() => {
+                          generateReceiptPDF('both');
+                          setIsExportOpen(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-xs text-cream hover:bg-surface-hover rounded-lg transition-colors cursor-pointer font-medium"
+                      >
+                        Comparison Receipt (Both)
+                      </button>
+                      <button
+                        onClick={() => {
+                          generateReceiptPDF('actual');
+                          setIsExportOpen(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-xs text-muted-text hover:bg-surface-hover hover:text-cream rounded-lg transition-colors cursor-pointer font-medium"
+                      >
+                        Actual Spend Only
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={() => {
                       generateReceiptPDF('reported');
@@ -379,7 +383,7 @@ export default function Transactions() {
                     }}
                     className="w-full text-left px-3.5 py-2 text-xs text-muted-text hover:bg-surface-hover hover:text-cream rounded-lg transition-colors cursor-pointer font-medium"
                   >
-                    Reported Budget Only
+                    Reported Budget Only {isPrivacyMode && "(Privacy Safe)"}
                   </button>
                 </div>
               </>
@@ -582,12 +586,12 @@ export default function Transactions() {
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right text-muted-text font-medium">{currencySymbol}{tx.reported_amount.toLocaleString()}</td>
-                      <td className="py-4 px-4 text-right text-muted-text font-medium">{currencySymbol}{tx.actual_spend.toLocaleString()}</td>
+                      <td className={`py-4 px-4 text-right text-muted-text font-medium ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>{currencySymbol}{tx.actual_spend.toLocaleString()}</td>
                       <td className="py-4 px-4 text-right whitespace-nowrap">
-                        <div className="font-bold text-success">
+                        <div className={`font-bold text-success ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>
                           +{currencySymbol}{tx.saved_amount.toLocaleString()}
                         </div>
-                        <div className="text-[9.5px] text-muted-text">
+                        <div className={`text-[9.5px] text-muted-text ${isPrivacyMode ? 'select-none filter blur-[3px] transition-all duration-300 hover:blur-none' : ''}`}>
                           {rate.toFixed(0)}% saved
                         </div>
                       </td>
@@ -626,7 +630,7 @@ export default function Transactions() {
             <span>
               Total: {filteredTransactions.length} logged transaction{filteredTransactions.length > 1 ? 's' : ''}
             </span>
-            <span className="font-semibold text-cream">
+            <span className={`font-semibold text-cream ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>
               Total Filtered Savings: {currencySymbol}{filteredTransactions.reduce((acc, t) => acc + t.saved_amount, 0).toLocaleString()}
             </span>
           </div>

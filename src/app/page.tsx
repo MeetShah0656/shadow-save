@@ -28,7 +28,8 @@ export default function Dashboard() {
     milestones, 
     currencySymbol, 
     deleteTransaction,
-    dbError
+    dbError,
+    isPrivacyMode
   } = useApp();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -160,6 +161,7 @@ export default function Dashboard() {
           },
         ].map((card, idx) => {
           const Icon = card.icon;
+          const isSensitive = card.title !== 'Total Reported';
           return (
             <motion.div
               initial={{ opacity: 0, y: 15 }}
@@ -177,7 +179,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div>
-                <h3 className={`text-2xl font-bold tracking-tight ${card.color}`}>
+                <h3 className={`text-2xl font-bold tracking-tight ${card.color} ${isPrivacyMode && isSensitive ? 'select-none filter blur-[6px] transition-all duration-300 hover:blur-none' : ''}`}>
                   {typeof card.value === 'number' 
                     ? `${currencySymbol}${card.value.toLocaleString('en-IN')}` 
                     : card.value}
@@ -213,11 +215,11 @@ export default function Dashboard() {
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-text">Actual Spending</span>
-                    <span className="font-semibold text-danger">{currencySymbol}{weeklySpend.toLocaleString()}</span>
+                    <span className={`font-semibold text-danger ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>{currencySymbol}{weeklySpend.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-surface-border/50">
                     <span className="text-xs font-bold text-success">Saved Amount</span>
-                    <span className="text-sm font-bold text-success">{currencySymbol}{weeklySaved.toLocaleString()}</span>
+                    <span className={`text-sm font-bold text-success ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>{currencySymbol}{weeklySaved.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -235,14 +237,14 @@ export default function Dashboard() {
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-text">Actual Spending</span>
-                    <span className="font-semibold text-danger">{currencySymbol}{monthlySpend.toLocaleString()}</span>
+                    <span className={`font-semibold text-danger ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>{currencySymbol}{monthlySpend.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-surface-border/50">
                     <div>
                       <span className="text-xs block font-bold text-success">Saved Amount</span>
-                      <span className="text-[9px] text-muted-text">Rate: {monthlySavingsRate.toFixed(1)}%</span>
+                      <span className={`text-[9px] text-muted-text ${isPrivacyMode ? 'select-none filter blur-[3px] transition-all duration-300 hover:blur-none' : ''}`}>Rate: {monthlySavingsRate.toFixed(1)}%</span>
                     </div>
-                    <span className="text-sm font-bold text-success">{currencySymbol}{monthlySaved.toLocaleString()}</span>
+                    <span className={`text-sm font-bold text-success ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>{currencySymbol}{monthlySaved.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -291,8 +293,8 @@ export default function Dashboard() {
                           </span>
                         </td>
                             <td className="py-3 text-right text-muted-text">{currencySymbol}{tx.reported_amount.toLocaleString()}</td>
-                            <td className="py-3 text-right text-muted-text">{currencySymbol}{tx.actual_spend.toLocaleString()}</td>
-                            <td className="py-3 text-right font-bold text-success">+{currencySymbol}{tx.saved_amount.toLocaleString()}</td>
+                            <td className={`py-3 text-right text-muted-text ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>{currencySymbol}{tx.actual_spend.toLocaleString()}</td>
+                            <td className={`py-3 text-right font-bold text-success ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>+{currencySymbol}{tx.saved_amount.toLocaleString()}</td>
                         <td className="py-3">
                           <div className="flex justify-center items-center gap-2">
                             <button
@@ -339,7 +341,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="mt-6 text-center">
+            <div className={`mt-6 text-center ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>
               <h2 className="text-4xl font-extrabold text-warning tracking-tight">
                 {streak} Day{streak !== 1 ? 's' : ''}
               </h2>
@@ -363,7 +365,7 @@ export default function Dashboard() {
 
             {/* Next Badge Progress */}
             {nextMilestone ? (
-              <div className="mb-6 p-3 bg-surface-hover border border-surface-border rounded-xl space-y-2">
+              <div className={`mb-6 p-3 bg-surface-hover border border-surface-border rounded-xl space-y-2 ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-muted-text font-medium">Next: {nextMilestone.title}</span>
                   <span className="text-cream font-bold">{milestoneProgress.toFixed(0)}%</span>
@@ -381,14 +383,14 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="mb-6 p-3 bg-success/10 border border-success/20 rounded-xl flex items-center gap-2">
+              <div className={`mb-6 p-3 bg-success/10 border border-success/20 rounded-xl flex items-center gap-2 ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>
                 <Award className="w-5 h-5 text-success" />
                 <span className="text-xs font-semibold text-success">All Milestones Unlocked! 🏆</span>
               </div>
             )}
 
             {/* Badges List */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid grid-cols-2 gap-3 ${isPrivacyMode ? 'select-none filter blur-[5px] transition-all duration-300 hover:blur-none' : ''}`}>
               {milestones.map((m) => (
                 <div 
                   key={m.id} 

@@ -24,8 +24,10 @@ import {
   CalendarRange
 } from 'lucide-react';
 
+import { motion } from 'framer-motion';
+
 export default function Analytics() {
-  const { transactions, currencySymbol } = useApp();
+  const { transactions, currencySymbol, isPrivacyMode } = useApp();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -220,142 +222,165 @@ export default function Analytics() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Title */}
-      <div>
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-cream">Analytics Dashboard</h2>
-        <p className="text-xs md:text-sm text-muted-text">
-          Deep-dive analysis of your reported expenses, spending distributions, and saving streaks.
-        </p>
-      </div>
+    <div className="space-y-8 relative">
+      {/* Privacy Mode Overlay */}
+      {isPrivacyMode && (
+        <div className="absolute inset-0 bg-background/10 z-10 flex flex-col items-center justify-center text-center p-6 rounded-2xl min-h-[450px]">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="max-w-sm p-6 bg-surface/90 border border-surface-border rounded-2xl shadow-2xl flex flex-col items-center backdrop-blur-xl"
+          >
+            <div className="p-4 bg-cream-dark/10 rounded-full border border-cream/20 text-cream mb-4">
+              <svg className="w-8 h-8 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-cream">Analytics Shielded</h3>
+            <p className="text-xs text-muted-text mt-2 leading-relaxed">
+              Charts, trends, and spending distributions are locked in Privacy Mode. Exit Privacy Mode using your PIN in the sidebar to access.
+            </p>
+          </motion.div>
+        </div>
+      )}
 
-      {/* Grid: Trend Line and Pie Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Savings Trend (Line Chart) */}
-        <div className="lg:col-span-2 glass-card p-6 rounded-2xl border border-surface-border">
-          <h3 className="text-sm font-bold text-cream mb-6 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-cream" /> Savings Trend (Cumulative Growth)
-          </h3>
-          <div className="h-72 w-full text-xs">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                <XAxis dataKey="date" stroke="#8E8E8E" tickLine={false} axisLine={false} />
-                <YAxis stroke="#8E8E8E" tickLine={false} axisLine={false} tickFormatter={(v) => `${currencySymbol}${v}`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="Cumulative Savings" 
-                  stroke="#F5E6C8" 
-                  strokeWidth={2.5}
-                  dot={{ fill: '#0A0A0A', stroke: '#F5E6C8', strokeWidth: 1.5, r: 4 }}
-                  activeDot={{ fill: '#F5E6C8', stroke: '#0A0A0A', strokeWidth: 2, r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+      <div className={`space-y-8 transition-all duration-300 ${isPrivacyMode ? 'filter blur-md select-none pointer-events-none' : ''}`}>
+        {/* Title */}
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-cream">Analytics Dashboard</h2>
+          <p className="text-xs md:text-sm text-muted-text">
+            Deep-dive analysis of your reported expenses, spending distributions, and saving streaks.
+          </p>
         </div>
 
-        {/* Spending Categories (Pie Chart) */}
-        <div className="glass-card p-6 rounded-2xl border border-surface-border">
-          <h3 className="text-sm font-bold text-cream mb-6 flex items-center gap-2">
-            <PieIcon className="w-4 h-4 text-cream" /> Spending Categories (Actual Spend)
-          </h3>
-          <div className="h-56 w-full text-xs relative flex items-center justify-center">
-            {categoriesData.length === 0 ? (
-              <div className="text-center text-muted-text">No spending recorded.</div>
-            ) : (
+        {/* Grid: Trend Line and Pie Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Savings Trend (Line Chart) */}
+          <div className="lg:col-span-2 glass-card p-6 rounded-2xl border border-surface-border">
+            <h3 className="text-sm font-bold text-cream mb-6 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-cream" /> Savings Trend (Cumulative Growth)
+            </h3>
+            <div className="h-72 w-full text-xs">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoriesData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {categoriesData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
+                <LineChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                  <XAxis dataKey="date" stroke="#8E8E8E" tickLine={false} axisLine={false} />
+                  <YAxis stroke="#8E8E8E" tickLine={false} axisLine={false} tickFormatter={(v) => `${currencySymbol}${v}`} />
                   <Tooltip content={<CustomTooltip />} />
-                </PieChart>
+                  <Line 
+                    type="monotone" 
+                    dataKey="Cumulative Savings" 
+                    stroke="#F5E6C8" 
+                    strokeWidth={2.5}
+                    dot={{ fill: '#0A0A0A', stroke: '#F5E6C8', strokeWidth: 1.5, r: 4 }}
+                    activeDot={{ fill: '#F5E6C8', stroke: '#0A0A0A', strokeWidth: 2, r: 6 }}
+                  />
+                </LineChart>
               </ResponsiveContainer>
-            )}
+            </div>
           </div>
-          {/* Custom Legends */}
-          <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] text-muted-text border-t border-surface-border/50 pt-4">
-            {categoriesData.map((entry) => (
-              <div key={entry.name} className="flex items-center gap-1.5 truncate">
-                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
-                <span className="truncate">{entry.name}</span>
-                <span className="font-semibold text-cream ml-auto">{currencySymbol}{entry.value.toLocaleString()}</span>
-              </div>
-            ))}
+
+          {/* Spending Categories (Pie Chart) */}
+          <div className="glass-card p-6 rounded-2xl border border-surface-border">
+            <h3 className="text-sm font-bold text-cream mb-6 flex items-center gap-2">
+              <PieIcon className="w-4 h-4 text-cream" /> Spending Categories (Actual Spend)
+            </h3>
+            <div className="h-56 w-full text-xs relative flex items-center justify-center">
+              {categoriesData.length === 0 ? (
+                <div className="text-center text-muted-text">No spending recorded.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoriesData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {categoriesData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+            {/* Custom Legends */}
+            <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] text-muted-text border-t border-surface-border/50 pt-4">
+              {categoriesData.map((entry) => (
+                <div key={entry.name} className="flex items-center gap-1.5 truncate">
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+                  <span className="truncate">{entry.name}</span>
+                  <span className="font-semibold text-cream ml-auto">{currencySymbol}{entry.value.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
           </div>
+
         </div>
 
-      </div>
-
-      {/* Grid: Weekly Bar and Monthly Grouped Bar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Weekly Savings totals */}
-        <div className="glass-card p-6 rounded-2xl border border-surface-border">
-          <h3 className="text-sm font-bold text-cream mb-6 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-cream" /> Weekly Savings Totals
-          </h3>
-          <div className="h-72 w-full text-xs">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                <XAxis dataKey="week" stroke="#8E8E8E" tickLine={false} axisLine={false} />
-                <YAxis stroke="#8E8E8E" tickLine={false} axisLine={false} tickFormatter={(v) => `${currencySymbol}${v}`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar 
-                  dataKey="Saved Amount" 
-                  fill="#2ECC71" 
-                  radius={[6, 6, 0, 0]}
-                  maxBarSize={40}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+        {/* Grid: Weekly Bar and Monthly Grouped Bar */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Weekly Savings totals */}
+          <div className="glass-card p-6 rounded-2xl border border-surface-border">
+            <h3 className="text-sm font-bold text-cream mb-6 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-cream" /> Weekly Savings Totals
+            </h3>
+            <div className="h-72 w-full text-xs">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weeklyData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                  <XAxis dataKey="week" stroke="#8E8E8E" tickLine={false} axisLine={false} />
+                  <YAxis stroke="#8E8E8E" tickLine={false} axisLine={false} tickFormatter={(v) => `${currencySymbol}${v}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar 
+                    dataKey="Saved Amount" 
+                    fill="#2ECC71" 
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={40}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
 
-        {/* Monthly Comparison (Reported vs Actual) */}
-        <div className="glass-card p-6 rounded-2xl border border-surface-border">
-          <h3 className="text-sm font-bold text-cream mb-6 flex items-center gap-2">
-            <CalendarRange className="w-4 h-4 text-cream" /> Monthly Comparison (Reported vs Actual)
-          </h3>
-          <div className="h-72 w-full text-xs">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyCompData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                <XAxis dataKey="month" stroke="#8E8E8E" tickLine={false} axisLine={false} />
-                <YAxis stroke="#8E8E8E" tickLine={false} axisLine={false} tickFormatter={(v) => `${currencySymbol}${v}`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend iconSize={10} verticalAlign="top" height={36} wrapperStyle={{ color: '#8E8E8E' }} />
-                <Bar 
-                  dataKey="Reported" 
-                  fill="#F5E6C8" 
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={30}
-                />
-                <Bar 
-                  dataKey="Actual" 
-                  fill="#E74C3C" 
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={30}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+          {/* Monthly Comparison (Reported vs Actual) */}
+          <div className="glass-card p-6 rounded-2xl border border-surface-border">
+            <h3 className="text-sm font-bold text-cream mb-6 flex items-center gap-2">
+              <CalendarRange className="w-4 h-4 text-cream" /> Monthly Comparison (Reported vs Actual)
+            </h3>
+            <div className="h-72 w-full text-xs">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyCompData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                  <XAxis dataKey="month" stroke="#8E8E8E" tickLine={false} axisLine={false} />
+                  <YAxis stroke="#8E8E8E" tickLine={false} axisLine={false} tickFormatter={(v) => `${currencySymbol}${v}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend iconSize={10} verticalAlign="top" height={36} wrapperStyle={{ color: '#8E8E8E' }} />
+                  <Bar 
+                    dataKey="Reported" 
+                    fill="#F5E6C8" 
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={30}
+                  />
+                  <Bar 
+                    dataKey="Actual" 
+                    fill="#E74C3C" 
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={30}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   );

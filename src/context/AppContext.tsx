@@ -34,6 +34,10 @@ interface AppContextType {
   updateSettings: (s: Partial<Settings>) => void;
   refreshData: () => void;
   signOut: () => Promise<void>;
+  isPrivacyMode: boolean;
+  hasPrivacyPin: boolean;
+  setPrivacyPin: (pin: string) => void;
+  togglePrivacyMode: (pin: string) => boolean;
 
   dbError: string;
 }
@@ -47,6 +51,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [settings, setSettings] = useState<Settings>(getSettings());
   const [isLoading, setIsLoading] = useState(true);
 
+  const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
+  const [privacyPin, setPrivacyPinState] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const mode = localStorage.getItem('shadowsave_privacy_mode') === 'true';
+      const pin = localStorage.getItem('shadowsave_privacy_pin') || '';
+      setIsPrivacyMode(mode);
+      setPrivacyPinState(pin);
+    }
+  }, []);
+
+  const handleSetPrivacyPin = (pin: string) => {
+    localStorage.setItem('shadowsave_privacy_pin', pin);
+    setPrivacyPinState(pin);
+  };
+
+  const handleTogglePrivacyMode = (pin: string): boolean => {
+    if (isPrivacyMode) {
+      if (pin === privacyPin) {
+        localStorage.setItem('shadowsave_privacy_mode', 'false');
+        setIsPrivacyMode(false);
+        return true;
+      }
+      return false;
+    } else {
+      localStorage.setItem('shadowsave_privacy_mode', 'true');
+      setIsPrivacyMode(true);
+      return true;
+    }
+  };
 
   const [dbError, setDbError] = useState<string>('');
 
@@ -337,7 +372,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSettings: handleUpdateSettings,
         refreshData,
         signOut: handleSignOut,
-
+        isPrivacyMode,
+        hasPrivacyPin: privacyPin !== '',
+        setPrivacyPin: handleSetPrivacyPin,
+        togglePrivacyMode: handleTogglePrivacyMode,
         dbError,
       }}
     >

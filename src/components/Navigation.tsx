@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
@@ -12,7 +12,10 @@ import {
   Settings as SettingsIcon,
   Flame,
   PiggyBank,
-  TrendingUp
+  TrendingUp,
+  Lock,
+  Unlock,
+  X
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -21,8 +24,112 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
   const { 
     streak, 
     transactions, 
-    currencySymbol 
+    currencySymbol,
+    isPrivacyMode,
+    hasPrivacyPin,
+    setPrivacyPin,
+    togglePrivacyMode
   } = useApp();
+
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinAction, setPinAction] = useState<'set' | 'enter'>('enter');
+  const [pinStep, setPinStep] = useState<'enter_new' | 'confirm_new'>('enter_new');
+  const [pinValue, setPinValue] = useState('');
+  const [confirmPinValue, setConfirmPinValue] = useState('');
+  const [tempPin, setTempPin] = useState('');
+  const [pinError, setPinError] = useState('');
+
+  const handleLockClick = () => {
+    if (isPrivacyMode) {
+      setPinAction('enter');
+      setPinValue('');
+      setPinError('');
+      setShowPinModal(true);
+    } else {
+      if (!hasPrivacyPin) {
+        setPinAction('set');
+        setPinStep('enter_new');
+        setPinValue('');
+        setConfirmPinValue('');
+        setTempPin('');
+        setPinError('');
+        setShowPinModal(true);
+      } else {
+        togglePrivacyMode('');
+      }
+    }
+  };
+
+  const handleKeypadPress = (val: string) => {
+    const currentVal = pinAction === 'set' && pinStep === 'confirm_new' ? confirmPinValue : pinValue;
+    if (currentVal.length < 4) {
+      const newVal = currentVal + val;
+      updatePinState(newVal);
+    }
+  };
+
+  const handleKeypadClear = () => {
+    updatePinState('');
+  };
+
+  const handleKeypadBackspace = () => {
+    const currentVal = pinAction === 'set' && pinStep === 'confirm_new' ? confirmPinValue : pinValue;
+    if (currentVal.length > 0) {
+      updatePinState(currentVal.slice(0, -1));
+    }
+  };
+
+  const handleHiddenInputChange = (val: string) => {
+    const numeric = val.replace(/[^0-9]/g, '');
+    if (numeric.length <= 4) {
+      updatePinState(numeric);
+    }
+  };
+
+  const updatePinState = (newVal: string) => {
+    setPinError('');
+    if (pinAction === 'set') {
+      if (pinStep === 'enter_new') {
+        setPinValue(newVal);
+        if (newVal.length === 4) {
+          setTimeout(() => {
+            setTempPin(newVal);
+            setPinStep('confirm_new');
+            setPinValue('');
+          }, 200);
+        }
+      } else {
+        setConfirmPinValue(newVal);
+        if (newVal.length === 4) {
+          setTimeout(() => {
+            if (newVal === tempPin) {
+              setPrivacyPin(newVal);
+              togglePrivacyMode('');
+              setShowPinModal(false);
+            } else {
+              setPinError('PINs do not match. Try again.');
+              setPinStep('enter_new');
+              setPinValue('');
+              setConfirmPinValue('');
+            }
+          }, 200);
+        }
+      }
+    } else {
+      setPinValue(newVal);
+      if (newVal.length === 4) {
+        setTimeout(() => {
+          const success = togglePrivacyMode(newVal);
+          if (success) {
+            setShowPinModal(false);
+          } else {
+            setPinError('Incorrect PIN. Please try again.');
+            setPinValue('');
+          }
+        }, 200);
+      }
+    }
+  };
 
 
 
@@ -54,7 +161,17 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
               <span className="text-[10px] text-muted-text uppercase tracking-wider font-semibold">Finance Companion</span>
             </div>
           </div>
-
+          <button 
+            onClick={handleLockClick}
+            className={`p-2 rounded-xl border transition-all cursor-pointer ${
+              isPrivacyMode 
+                ? 'bg-danger/10 border-danger/20 text-danger hover:bg-danger/20' 
+                : 'bg-surface-hover border-surface-border text-muted-text hover:text-cream'
+            }`}
+            title={isPrivacyMode ? "Exit Privacy Mode" : "Enter Privacy Mode"}
+          >
+            {isPrivacyMode ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+          </button>
         </div>
 
         {/* Nav Links */}
@@ -88,43 +205,45 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
         </nav>
 
         {/* Sidebar Footer - Streak & Total Savings */}
-        <div className="mt-auto space-y-4 pt-6 border-t border-surface-border">
-          {/* Streak Widget */}
-          {streak > 0 ? (
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="flex items-center gap-3 p-3 bg-gradient-to-br from-warning/10 to-danger/5 border border-warning/15 rounded-xl glow-hover"
-            >
-              <div className="p-1.5 bg-warning/20 rounded-lg text-warning">
-                <Flame className="w-5 h-5 fill-current animate-bounce" />
+        {!isPrivacyMode && (
+          <div className="mt-auto space-y-4 pt-6 border-t border-surface-border">
+            {/* Streak Widget */}
+            {streak > 0 ? (
+              <motion.div 
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="flex items-center gap-3 p-3 bg-gradient-to-br from-warning/10 to-danger/5 border border-warning/15 rounded-xl glow-hover"
+              >
+                <div className="p-1.5 bg-warning/20 rounded-lg text-warning">
+                  <Flame className="w-5 h-5 fill-current animate-bounce" />
+                </div>
+                <div>
+                  <div className="text-xs text-muted-text">Saving Streak</div>
+                  <div className="text-sm font-bold text-warning">{streak} Day{streak > 1 ? 's' : ''}</div>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="flex items-center gap-3 p-3 bg-surface-hover/50 border border-surface-border rounded-xl">
+                <div className="p-1.5 bg-surface-border rounded-lg text-muted-text">
+                  <Flame className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs text-muted-text">Start Saving</div>
+                  <div className="text-xs font-semibold text-foreground">Log savings to streak!</div>
+                </div>
               </div>
-              <div>
-                <div className="text-xs text-muted-text">Saving Streak</div>
-                <div className="text-sm font-bold text-warning">{streak} Day{streak > 1 ? 's' : ''}</div>
-              </div>
-            </motion.div>
-          ) : (
-            <div className="flex items-center gap-3 p-3 bg-surface-hover/50 border border-surface-border rounded-xl">
-              <div className="p-1.5 bg-surface-border rounded-lg text-muted-text">
-                <Flame className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-xs text-muted-text">Start Saving</div>
-                <div className="text-xs font-semibold text-foreground">Log savings to streak!</div>
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* Quick Metrics */}
-          <div className="p-3 bg-cream-dark/15 border border-cream/5 rounded-xl flex items-center justify-between">
-            <div>
-              <div className="text-[10px] text-muted-text uppercase tracking-wider">Total Saved</div>
-              <div className="text-base font-bold text-cream">{currencySymbol}{totalSaved.toLocaleString('en-IN')}</div>
+            {/* Quick Metrics */}
+            <div className="p-3 bg-cream-dark/15 border border-cream/5 rounded-xl flex items-center justify-between">
+              <div>
+                <div className="text-[10px] text-muted-text uppercase tracking-wider">Total Saved</div>
+                <div className="text-base font-bold text-cream">{currencySymbol}{totalSaved.toLocaleString('en-IN')}</div>
+              </div>
+              <TrendingUp className="w-5 h-5 text-success opacity-85" />
             </div>
-            <TrendingUp className="w-5 h-5 text-success opacity-85" />
           </div>
-        </div>
+        )}
       </aside>
 
       {/* Header for Mobile */}
@@ -137,8 +256,19 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
         </div>
         
         <div className="flex items-center gap-2">
+          <button 
+            onClick={handleLockClick}
+            className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+              isPrivacyMode 
+                ? 'bg-danger/10 border-danger/20 text-danger' 
+                : 'bg-surface-hover border-surface-border text-muted-text'
+            }`}
+          >
+            {isPrivacyMode ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+          </button>
+
           {/* Mobile Streak */}
-          {streak > 0 && (
+          {!isPrivacyMode && streak > 0 && (
             <div className="flex items-center gap-1.5 px-3 py-1 bg-warning/10 border border-warning/20 rounded-full text-warning text-xs font-bold">
               <Flame className="w-3.5 h-3.5 fill-current animate-pulse" />
               <span>{streak} Days</span>
@@ -175,6 +305,103 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
         })}
       </nav>
 
+      {/* PIN Verification / Creation Modal Overlay */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-background/85 backdrop-blur-xl z-55 flex items-center justify-center p-4">
+          <div className="bg-surface border border-surface-border rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl relative">
+            <button
+              onClick={() => setShowPinModal(false)}
+              className="absolute right-4 top-4 p-1.5 rounded-lg bg-surface-hover border border-surface-border text-muted-text hover:text-cream cursor-pointer"
+            >
+              <X className="w-4.5 h-4.5" />
+            </button>
+
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-cream-dark/10 rounded-full border border-cream/20 text-cream">
+                <Lock className="w-6 h-6 animate-pulse" />
+              </div>
+            </div>
+
+            <h3 className="text-lg font-bold text-cream">
+              {pinAction === 'set' 
+                ? (pinStep === 'enter_new' ? 'Create Privacy PIN' : 'Confirm Privacy PIN')
+                : 'Enter Privacy PIN'
+              }
+            </h3>
+            
+            <p className="text-xs text-muted-text mt-1 mb-6">
+              {pinAction === 'set'
+                ? (pinStep === 'enter_new' ? 'Set a 4-digit PIN to exit Privacy Mode later.' : 'Re-enter your 4-digit PIN to confirm.')
+                : 'Enter your 4-digit PIN to restore full savings visibility.'
+              }
+            </p>
+
+            {/* Dots indicator */}
+            <div className="flex justify-center gap-4 mb-6">
+              {[0, 1, 2, 3].map((index) => {
+                const currentVal = pinAction === 'set' && pinStep === 'confirm_new' ? confirmPinValue : pinValue;
+                const isFilled = index < currentVal.length;
+                return (
+                  <div
+                    key={index}
+                    className={`w-4.5 h-4.5 rounded-full border transition-all duration-150 ${
+                      isFilled 
+                        ? 'bg-cream border-cream scale-110 shadow-lg shadow-cream/25' 
+                        : 'border-surface-border bg-surface-hover'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+
+            {pinError && (
+              <p className="text-xs text-danger font-medium mb-4">{pinError}</p>
+            )}
+
+            {/* Numeric Keypad */}
+            <div className="grid grid-cols-3 gap-2.5 max-w-[240px] mx-auto">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                <button
+                  key={num}
+                  onClick={() => handleKeypadPress(num.toString())}
+                  className="py-3 bg-surface-hover hover:bg-surface-border text-cream font-bold rounded-xl transition-colors cursor-pointer text-sm border border-surface-border/40"
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                onClick={handleKeypadClear}
+                className="py-3 text-muted-text hover:text-cream font-medium rounded-xl transition-colors cursor-pointer text-xs"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => handleKeypadPress('0')}
+                className="py-3 bg-surface-hover hover:bg-surface-border text-cream font-bold rounded-xl transition-colors cursor-pointer text-sm border border-surface-border/40"
+              >
+                0
+              </button>
+              <button
+                onClick={handleKeypadBackspace}
+                className="py-3 text-muted-text hover:text-cream font-medium rounded-xl transition-colors cursor-pointer text-xs"
+              >
+                Delete
+              </button>
+            </div>
+
+            {/* Invisible Mobile Keyboard Input */}
+            <input
+              type="tel"
+              pattern="[0-9]*"
+              maxLength={4}
+              value={pinAction === 'set' && pinStep === 'confirm_new' ? confirmPinValue : pinValue}
+              onChange={(e) => handleHiddenInputChange(e.target.value)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-default"
+              autoFocus
+            />
+          </div>
+        </div>
+      )}
 
     </div>
   );
