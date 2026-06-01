@@ -438,3 +438,23 @@ export const checkAndSeedDatabase = (): void => {
     localStorage.setItem('shadowsave_transfers', JSON.stringify(mockTransfers));
   }
 };
+
+export const formatDateDisplay = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  
+  const year = parts[0];
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10).toString();
+  
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  
+  const month = monthNames[monthIdx];
+  if (!month) return dateStr;
+  
+  return `${day} ${month} ${year}`;
+};

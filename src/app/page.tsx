@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { formatDateDisplay } from '@/lib/db';
 import { useApp } from '@/context/AppContext';
 import { AddEntryModal } from '@/components/AddEntryModal';
 import { 
@@ -286,7 +287,7 @@ export default function Dashboard() {
                   <tbody className="divide-y divide-surface-border/40">
                     {transactions.slice(0, 5).map((tx) => (
                       <tr key={tx.id} className="group hover:bg-surface-hover/30">
-                        <td className="py-3 font-medium text-cream">{tx.date}</td>
+                        <td className="py-3 font-medium text-cream">{formatDateDisplay(tx.date)}</td>
                         <td className="py-3">
                           <span className="px-2 py-0.5 rounded-full bg-surface-border border border-surface-border text-[10px] font-medium">
                             {tx.category}

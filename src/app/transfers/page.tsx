@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { formatDateDisplay } from '@/lib/db';
 import { useApp } from '@/context/AppContext';
 import { 
   ArrowLeftRight, 
@@ -323,7 +324,7 @@ export default function Transfers() {
                             <div className="text-xs font-bold text-cream flex items-center gap-2 flex-wrap">
                               <span>{tr.destination}</span>
                               <span className="text-[9px] px-2 py-0.5 rounded-full bg-surface-border border border-surface-border text-muted-text font-normal">
-                                {tr.date}
+                                {formatDateDisplay(tr.date)}
                               </span>
                             </div>
                             {tr.notes ? (

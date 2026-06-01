@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { formatDateDisplay } from '@/lib/db';
 import { useApp } from '@/context/AppContext';
 import { AddEntryModal } from '@/components/AddEntryModal';
 import { 
@@ -579,7 +580,7 @@ export default function Transactions() {
                       key={tx.id} 
                       className="group hover:bg-surface-hover/30 transition-colors"
                     >
-                      <td className="py-4 px-6 font-semibold text-cream whitespace-nowrap">{tx.date}</td>
+                      <td className="py-4 px-6 font-semibold text-cream whitespace-nowrap">{formatDateDisplay(tx.date)}</td>
                       <td className="py-4 px-4 whitespace-nowrap">
                         <span className="px-2.5 py-1 rounded-full bg-surface-hover border border-surface-border text-[10px] font-semibold text-foreground">
                           {tx.category}
